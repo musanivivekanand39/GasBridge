@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Authorized Delivery Agents Roster for Depot.">
+  <title>Delivery Agents - GasBridge</title>
+  
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/dashboard.css">
+  <link rel="stylesheet" href="../css/responsive.css">
+</head>
+<body>
+
+  <div class="dashboard-layout">
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <a href="distributor-dashboard.html" class="brand-logo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path>
+          </svg>
+          <div>
+            <span>GasBridge</span>
+            <span class="sidebar-role-badge role-distributor">Distributor</span>
+          </div>
+        </a>
+      </div>
+
+      <nav class="sidebar-nav">
+        <span class="nav-category">Depot Management</span>
+        <a href="distributor-dashboard.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          Dashboard
+        </a>
+        <a href="distributor-bookings.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+          Area Bookings
+        </a>
+        <a href="distributor-inventory.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+          LPG Inventory
+        </a>
+        <a href="distributor-agents.html" class="sidebar-link active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          Delivery Agents
+        </a>
+        <a href="distributor-customers.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          Area Customers
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-mini-profile">
+          <div class="user-avatar" id="sidebar-user-avatar">D</div>
+          <div class="user-info">
+            <span class="user-name" id="sidebar-user-name">Distributor</span>
+            <span class="user-email" id="sidebar-user-email">-</span>
+          </div>
+        </div>
+        <button class="btn-icon" id="logout-btn" title="Sign Out">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+        </button>
+      </div>
+    </aside>
+
+    <div class="dashboard-main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="mobile-toggle" id="sidebar-toggle-btn">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+          </button>
+          <h2 class="page-title">Depot Delivery Personnel Roster</h2>
+        </div>
+
+        <div class="topbar-right">
+          <div class="notification-wrapper"></div>
+        </div>
+      </header>
+
+      <main class="dashboard-content">
+        <!-- Pending Delivery Agent Applications Section -->
+        <div class="card" id="pending-agents-card" style="border-left: 4px solid var(--warning); margin-bottom: 2rem;">
+          <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <span style="font-size: 1.35rem;">🛵</span>
+                <h3 class="card-title" style="margin: 0;">Pending Delivery Agent Applications</h3>
+                <span class="badge badge-warning" id="pending-agents-count-badge">0 Pending</span>
+              </div>
+              <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0.35rem 0 0 0;">
+                Delivery personnel who registered for delivery service in your depot's jurisdiction. Accept them to grant portal access and authorize them for dispatches.
+              </p>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Agent Name</th>
+                  <th>Mobile</th>
+                  <th>Email</th>
+                  <th>Address</th>
+                  <th>Registration Date</th>
+                  <th>Status</th>
+                  <th style="text-align: right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="distributor-pending-agents-tbody">
+                <tr>
+                  <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-muted);">Loading pending applications...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Authorized & Active Fleet Card -->
+        <div class="card">
+          <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <h3 class="card-title">Assigned &amp; Active Delivery Fleet</h3>
+              <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0.25rem 0 0 0;">
+                Active agents currently authorized to accept dispatches and perform doorstep cylinder handovers.
+              </p>
+            </div>
+            <span class="badge badge-success" id="active-agents-count-badge">0 Active</span>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Agent ID</th>
+                  <th>Full Name</th>
+                  <th>Contact Mobile</th>
+                  <th>Vehicle Number</th>
+                  <th>Covered Pincodes</th>
+                  <th>Duty Status</th>
+                  <th>Account</th>
+                </tr>
+              </thead>
+              <tbody id="distributor-agents-tbody">
+                <tr>
+                  <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-muted);">Loading agents...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- View Delivery Agent Details Modal (Rule 8) -->
+  <div class="modal" id="view-agent-modal">
+    <div class="modal-overlay" data-close-modal></div>
+    <div class="modal-content" style="max-width: 620px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Delivery Agent Registration Details</h3>
+        <button class="modal-close" data-close-modal>&times;</button>
+      </div>
+      <div class="modal-body" id="view-agent-body" style="padding: 1.25rem;">
+        <!-- Filled dynamically -->
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+        <button class="btn btn-outline" data-close-modal>Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { requireAuth, logoutUser } from "../js/auth.js";
+    import { getDeliveryAgents, getPendingDeliveryAgents, approveDeliveryAgent, rejectDeliveryAgent } from "../js/firestore.js";
+    import { initNotificationsUI } from "../js/notifications.js";
+    import { escapeHTML, showToast, formatDateTime, initModalListeners } from "../js/utils.js";
+
+    const user = requireAuth(['distributor', 'admin']);
+    if (user) {
+      document.getElementById('sidebar-user-name').textContent = user.name || 'Distributor Depot';
+      document.getElementById('sidebar-user-email').textContent = user.email || '';
+      document.getElementById('sidebar-user-avatar').textContent = (user.name || 'D').charAt(0).toUpperCase();
+
+      initModalListeners();
+      initNotificationsUI();
+
+      async function loadAgents() {
+        const distId = user.distributorId || 'dist-01';
+        const pendingAgents = await getPendingDeliveryAgents(distId);
+        const allAgents = await getDeliveryAgents(distId);
+        const activeAgents = allAgents.filter(a => a.approvalStatus === 'approved' || (a.active && a.approvalStatus !== 'rejected'));
+
+        const pendingTbody = document.getElementById('distributor-pending-agents-tbody');
+        const activeTbody = document.getElementById('distributor-agents-tbody');
+        const pendingBadge = document.getElementById('pending-agents-count-badge');
+        const activeBadge = document.getElementById('active-agents-count-badge');
+
+        if (pendingBadge) pendingBadge.textContent = `${pendingAgents.length} Pending`;
+        if (activeBadge) activeBadge.textContent = `${activeAgents.length} Active`;
+
+        // Render Pending Applications (Rule 8)
+        if (pendingAgents.length === 0) {
+          pendingTbody.innerHTML = `
+            <tr>
+              <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                <div style="font-size: 1.25rem; margin-bottom: 0.35rem;">✅</div>
+                <div>No pending delivery agent applications for your depot. All applicants have been reviewed!</div>
+              </td>
+            </tr>
+          `;
+        } else {
+          pendingTbody.innerHTML = pendingAgents.map(a => {
+            return `
+              <tr>
+                <td><strong>${escapeHTML(a.name)}</strong></td>
+                <td>${escapeHTML(a.mobile || '-')}</td>
+                <td>${escapeHTML(a.email || '-')}</td>
+                <td style="font-size: 0.85rem; max-width: 180px;">${escapeHTML(a.address || '-')}</td>
+                <td style="font-size: 0.82rem;">${formatDateTime(a.createdAt)}</td>
+                <td><span class="badge badge-warning">Pending</span></td>
+                <td style="text-align: right; white-space: nowrap;">
+                  <button class="btn btn-sm btn-outline btn-view-agent" data-id="${escapeHTML(a.id)}" style="margin-right: 0.25rem; font-weight: 600;">
+                    View
+                  </button>
+                  <button class="btn btn-sm btn-primary btn-approve-agent" data-id="${escapeHTML(a.id)}" style="margin-right: 0.25rem; font-weight: 600;">
+                    Approve
+                  </button>
+                  <button class="btn btn-sm btn-outline-danger btn-reject-agent" data-id="${escapeHTML(a.id)}" style="font-weight: 600;">
+                    Reject
+                  </button>
+                </td>
+              </tr>
+            `;
+          }).join('');
+
+          // Bind view modal
+          pendingTbody.querySelectorAll('.btn-view-agent').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+              const agentId = e.currentTarget.getAttribute('data-id');
+              const agent = pendingAgents.find(x => x.id === agentId);
+              if (agent) {
+                const bodyEl = document.getElementById('view-agent-body');
+                if (bodyEl) {
+                  bodyEl.innerHTML = `
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                      <div>
+                        <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block;">Agent Full Name</span>
+                        <strong style="font-size: 1.05rem;">${escapeHTML(agent.name || '-')}</strong>
+                      </div>
+                      <div>
+                        <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block;">Operating Vehicle</span>
+                        <div>${escapeHTML(agent.vehicleNumber || 'Standard Delivery Vehicle')}</div>
+                      </div>
+                      <div>
+                        <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block;">Mobile</span>
+                        <div>${escapeHTML(agent.mobile || '-')}</div>
+                      </div>
+                      <div>
+                        <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block;">Email</span>
+                        <div>${escapeHTML(agent.email || '-')}</div>
+                      </div>
+                    </div>
+                    <div style="margin-bottom: 1rem; padding: 0.75rem; background: var(--bg-alt); border-radius: var(--radius-sm);">
+                      <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block;">Residential Address</span>
+                      <div>${escapeHTML(agent.address || '-')}</div>
+                      <div style="margin-top: 0.35rem; font-size: 0.85rem;">Pincode: <strong>${escapeHTML(agent.pincode || '-')}</strong></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted);">
+                      <span>Submitted: ${formatDateTime(agent.createdAt)}</span>
+                      <span>Status: <strong class="badge badge-warning">Pending</strong></span>
+                    </div>
+                  `;
+                }
+                const modal = document.getElementById('view-agent-modal');
+                if (modal) modal.classList.add('active');
+              }
+            });
+          });
+
+          // Bind approval click handlers
+          pendingTbody.querySelectorAll('.btn-approve-agent').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+              const agentId = e.currentTarget.getAttribute('data-id');
+              try {
+                e.currentTarget.disabled = true;
+                e.currentTarget.textContent = 'Approving...';
+                await approveDeliveryAgent(agentId, distId);
+                showToast("Agent Approved", "Delivery agent approved! Notification recorded.", "success");
+                await loadAgents();
+              } catch (err) {
+                showToast("Approval Failed", err.message || "Could not approve agent.", "error");
+                e.currentTarget.disabled = false;
+                e.currentTarget.textContent = 'Approve';
+              }
+            });
+          });
+
+          // Bind rejection click handlers
+          pendingTbody.querySelectorAll('.btn-reject-agent').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+              const agentId = e.currentTarget.getAttribute('data-id');
+              const confirmed = confirm("Are you sure you want to reject this delivery agent application?");
+              if (confirmed) {
+                try {
+                  e.currentTarget.disabled = true;
+                  e.currentTarget.textContent = 'Rejecting...';
+                  await rejectDeliveryAgent(agentId, "Depot fleet capacity reached.");
+                  showToast("Agent Rejected", "The agent registration was rejected.", "info");
+                  await loadAgents();
+                } catch (err) {
+                  showToast("Rejection Failed", err.message || "Could not reject agent.", "error");
+                  e.currentTarget.disabled = false;
+                  e.currentTarget.textContent = 'Reject';
+                }
+              }
+            });
+          });
+        }
+
+        // Render Active Agents List
+        if (activeAgents.length === 0) {
+          activeTbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-muted);">No delivery agents assigned to this depot yet.</td></tr>`;
+          return;
+        }
+
+        activeTbody.innerHTML = activeAgents.map(a => `
+          <tr>
+            <td><strong style="color: var(--primary);">${escapeHTML(a.id)}</strong></td>
+            <td><strong>${escapeHTML(a.name)}</strong></td>
+            <td>${escapeHTML(a.mobile)}</td>
+            <td><span class="badge badge-info">${escapeHTML(a.vehicleNumber || 'Van')}</span></td>
+            <td>${a.pincodes.map(p => `<span class="badge badge-secondary" style="margin-right: 3px;">${escapeHTML(p)}</span>`).join('')}</td>
+            <td>
+              <span class="badge ${a.status === 'available' ? 'badge-success' : (a.status === 'busy' ? 'badge-warning' : 'badge-danger')}">
+                ${a.status.toUpperCase()}
+              </span>
+            </td>
+            <td><span class="badge badge-success">Active &amp; Authorized</span></td>
+          </tr>
+        `).join('');
+      }
+
+      loadAgents();
+
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+      const toggleBtn = document.getElementById('sidebar-toggle-btn');
+      if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+          sidebar.classList.toggle('open');
+          overlay.classList.toggle('active');
+        });
+      }
+      if (overlay) {
+        overlay.addEventListener('click', () => {
+          sidebar.classList.remove('open');
+          overlay.classList.remove('active');
+        });
+      }
+
+      document.getElementById('logout-btn').addEventListener('click', () => logoutUser());
+    }
+  </script>
+</body>
+</html>

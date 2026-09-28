@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Book LPG Cylinder - Fixed Home Address Delivery. Fueling Better Homes.">
+  <title>Book LPG Cylinder - GasBridge</title>
+  
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/dashboard.css">
+  <link rel="stylesheet" href="../css/responsive.css">
+  <style>
+    .registered-connection-card {
+      border: 2px solid var(--primary);
+      background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      position: relative;
+      margin-bottom: 1.5rem;
+    }
+    .connection-badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.25rem 0.65rem;
+      border-radius: 9999px;
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+    }
+    .connection-badge.domestic {
+      background: #dcfce7;
+      color: #15803d;
+      border: 1px solid #86efac;
+    }
+    .connection-badge.commercial {
+      background: #ffedd5;
+      color: #c2410c;
+      border: 1px solid #fdba74;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="dashboard-layout">
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <a href="customer-dashboard.html" class="brand-logo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path>
+          </svg>
+          <div>
+            <span>GasBridge</span>
+            <span class="sidebar-role-badge role-customer">Customer</span>
+          </div>
+        </a>
+      </div>
+
+      <nav class="sidebar-nav">
+        <span class="nav-category">Main Menu</span>
+        <a href="customer-dashboard.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          Dashboard
+        </a>
+        <a href="customer-booking.html" class="sidebar-link active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+          Book LPG Cylinder
+        </a>
+        <a href="customer-bookings.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          My Bookings
+        </a>
+        <a href="customer-tracking.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          Live Tracking
+        </a>
+
+        <span class="nav-category">Account</span>
+        <a href="customer-profile.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          Profile & Address
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-mini-profile">
+          <div class="user-avatar" id="sidebar-user-avatar">C</div>
+          <div class="user-info">
+            <span class="user-name" id="sidebar-user-name">Customer</span>
+            <span class="user-email" id="sidebar-user-email">-</span>
+          </div>
+        </div>
+        <button class="btn-icon" id="logout-btn" title="Sign Out">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Container -->
+    <div class="dashboard-main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="mobile-toggle" id="sidebar-toggle-btn">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+          </button>
+          <h2 class="page-title">Book LPG Cylinder</h2>
+        </div>
+
+        <div class="topbar-right">
+          <div class="notification-wrapper"></div>
+        </div>
+      </header>
+
+      <main class="dashboard-content">
+        <div style="max-width: 900px; margin: 0 auto;">
+          <!-- Automatic Address & Distributor Routing Card (Rule 12, 28) -->
+          <div class="card" style="border-left: 5px solid var(--primary); margin-bottom: 2rem;">
+            <div class="card-header">
+              <h3 class="card-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                Permanent Delivery Destination
+              </h3>
+              <a href="customer-profile.html" class="btn btn-outline btn-sm">Edit Address in Profile</a>
+            </div>
+
+            <div id="fixed-address-display">
+              <p style="color: var(--text-muted);">Loading fixed home delivery address from profile...</p>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+              <div>
+                <span style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; display: block;">Service Area (Auto Determined)</span>
+                <strong id="service-area-display" style="font-size: 0.95rem; color: var(--text-main);">-</strong>
+              </div>
+              <div>
+                <span style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; display: block;">Authorized Distributor (Auto Assigned)</span>
+                <strong id="distributor-display" style="font-size: 0.95rem; color: var(--primary);">-</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Registered LPG Cylinder Connection (Rule 11, 27, 28) -->
+          <div class="card">
+            <h3 style="font-size: 1.15rem; margin-bottom: 1rem;">1. Your Registered LPG Connection</h3>
+
+            <div class="registered-connection-card">
+              <span class="connection-badge domestic" id="badge-connection-type">Domestic LPG</span>
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                  <h4 id="connection-title" style="font-size: 1.35rem; color: var(--text-main); margin: 0 0 0.35rem 0;">Domestic LPG Cylinder (14.2 kg)</h4>
+                  <p id="connection-desc" style="font-size: 0.88rem; color: var(--text-muted); margin: 0; max-width: 520px;">
+                    Standard subsidized Indian household cooking cylinder for residential kitchen use.
+                  </p>
+                </div>
+                <div style="text-align: right;">
+                  <span style="font-size: 0.8rem; color: var(--text-muted); display: block;">Unit Price</span>
+                  <div id="connection-price" style="font-size: 1.65rem; font-weight: 800; color: var(--primary); font-family: 'Outfit', sans-serif;">₹950</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quantity Selector -->
+            <div style="max-width: 320px;">
+              <label for="booking-quantity" style="font-weight: 700; font-size: 0.9rem; display: block; margin-bottom: 0.4rem;">
+                Refill Quantity (Max 3 Cylinders)
+              </label>
+              <select id="booking-quantity" class="form-control">
+                <option value="1">1 Cylinder</option>
+                <option value="2">2 Cylinders</option>
+                <option value="3">3 Cylinders</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Order Summary & Checkout (Rule 19, 20, 21) -->
+          <div class="card" style="background: #ffffff; border: 2px solid var(--border);">
+            <h3 style="font-size: 1.15rem; margin-bottom: 1rem;">2. Order Summary</h3>
+
+            <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.92rem; margin-bottom: 1.5rem;">
+              <div class="flex justify-between">
+                <span style="color: var(--text-muted);">Cylinder Type:</span>
+                <strong id="summary-cylinder-type">Domestic LPG Cylinder</strong>
+              </div>
+              <div class="flex justify-between">
+                <span style="color: var(--text-muted);">Net Weight:</span>
+                <span id="summary-cylinder-weight">14.2 kg</span>
+              </div>
+              <div class="flex justify-between">
+                <span style="color: var(--text-muted);">Unit Price:</span>
+                <span id="summary-unit-price">₹950</span>
+              </div>
+              <div class="flex justify-between">
+                <span style="color: var(--text-muted);">Quantity:</span>
+                <strong id="summary-quantity">1</strong>
+              </div>
+              <div class="flex justify-between" style="padding-top: 0.75rem; border-top: 1px solid var(--border); font-size: 1.25rem;">
+                <span>Total Payable Amount:</span>
+                <strong id="summary-total-amount" style="color: var(--primary); font-family: 'Outfit', sans-serif;">₹950</strong>
+              </div>
+            </div>
+
+            <button type="button" class="btn btn-primary btn-full btn-lg" id="proceed-to-payment-btn">
+              Proceed to Demo Payment &rarr;
+            </button>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { requireAuth, logoutUser } from "../js/auth.js";
+    import { initBookingPage } from "../js/booking.js";
+    import { initNotificationsUI } from "../js/notifications.js";
+    import { initModalListeners } from "../js/utils.js";
+
+    const user = requireAuth(['customer']);
+    if (user) {
+      document.getElementById('sidebar-user-name').textContent = user.name || 'Customer';
+      document.getElementById('sidebar-user-email').textContent = user.email || '';
+      document.getElementById('sidebar-user-avatar').textContent = (user.name || 'C').charAt(0).toUpperCase();
+
+      initModalListeners();
+      initBookingPage();
+      initNotificationsUI();
+
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+      const toggleBtn = document.getElementById('sidebar-toggle-btn');
+      if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+          sidebar.classList.toggle('open');
+          overlay.classList.toggle('active');
+        });
+      }
+      if (overlay) {
+        overlay.addEventListener('click', () => {
+          sidebar.classList.remove('open');
+          overlay.classList.remove('active');
+        });
+      }
+
+      document.getElementById('logout-btn').addEventListener('click', () => logoutUser());
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,165 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function me() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function role() { return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) ? me().role : ''; }
+    function distributorId() { return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) ? me().distributorId : ''; }
+    function admin() {
+      return signedIn() && (request.auth.token.admin == true ||
+        request.auth.token.email == 'admin@gasbridge.com');
+    }
+    function adminOrDistributorProfile(id) {
+      return admin() || (role() == 'distributor' && distributorId() == id);
+    }
+    function distributorFor(id) { return admin() || (role() == 'distributor' && distributorId() == id); }
+    function cleanProfile() { return !('password' in request.resource.data) && !('passwordHash' in request.resource.data); }
+    function profileOwnerUnchanged() {
+      return request.resource.data.role == resource.data.role &&
+        request.resource.data.status == resource.data.status &&
+        request.resource.data.approvalStatus == resource.data.approvalStatus &&
+        request.resource.data.approvedBy == resource.data.approvedBy &&
+        request.resource.data.distributorId == resource.data.distributorId;
+    }
+    function assignedAgentExists(agentId) {
+      return exists(/databases/$(database)/documents/deliveryAgents/$(agentId)) &&
+        get(/databases/$(database)/documents/deliveryAgents/$(agentId)).data.status == 'approved' &&
+        get(/databases/$(database)/documents/deliveryAgents/$(agentId)).data.distributorId == distributorId();
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || admin());
+      allow create: if signedIn() && request.auth.uid == uid && cleanProfile() &&
+        request.resource.data.role in ['customer', 'distributor', 'agent'] &&
+        request.resource.data.status == 'pending';
+      allow update: if cleanProfile() && (
+        (signedIn() && request.auth.uid == uid && profileOwnerUnchanged()) ||
+        admin() ||
+        (role() == 'distributor' && resource.data.role in ['customer', 'agent'] &&
+          resource.data.distributorId == distributorId() &&
+          request.resource.data.approvedBy == request.auth.uid &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'approvalStatus', 'active', 'approvedAt', 'approvedBy', 'rejectedAt', 'rejectedBy', 'rejectionReason', 'updatedAt']))
+      );
+      allow delete: if admin();
+    }
+
+    match /customers/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || admin() ||
+        (role() == 'distributor' && resource.data.distributorId == distributorId()));
+      allow create: if signedIn() && request.auth.uid == uid && cleanProfile() && request.resource.data.status == 'pending' &&
+        request.resource.data.distributorId is string;
+      allow update: if cleanProfile() && (
+        (signedIn() && request.auth.uid == uid && request.resource.data.status == resource.data.status &&
+          request.resource.data.approvalStatus == resource.data.approvalStatus &&
+          request.resource.data.distributorId == resource.data.distributorId &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'mobile', 'email', 'address', 'pincode', 'serviceAreaId', 'serviceAreaName', 'cylinderType', 'updatedAt'])) ||
+        admin() || (role() == 'distributor' && resource.data.distributorId == distributorId() &&
+          request.resource.data.approvedBy == request.auth.uid &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'approvalStatus', 'active', 'approvedAt', 'approvedBy', 'rejectedAt', 'rejectedBy', 'rejectionReason', 'updatedAt']))
+      );
+      allow delete: if admin();
+    }
+
+    match /distributors/{id} {
+      allow read: if true;
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid && cleanProfile() && request.resource.data.status == 'pending';
+      allow update: if admin() || (role() == 'distributor' && resource.data.userId == request.auth.uid &&
+        request.resource.data.status == resource.data.status && request.resource.data.approvalStatus == resource.data.approvalStatus &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'businessName', 'contactPerson', 'mobile', 'address', 'city', 'district', 'state', 'pincode', 'pincodes', 'updatedAt']));
+      allow delete: if admin();
+    }
+
+    match /deliveryAgents/{id} {
+      allow read: if signedIn() && (resource.data.userId == request.auth.uid || admin() ||
+        (role() == 'distributor' && resource.data.distributorId == distributorId()));
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid && cleanProfile() && request.resource.data.status == 'pending';
+      allow update: if cleanProfile() && (admin() ||
+        (role() == 'distributor' && resource.data.distributorId == distributorId() &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'approvalStatus', 'active', 'dutyStatus', 'approvedAt', 'approvedBy', 'rejectedAt', 'rejectedBy', 'rejectionReason', 'updatedAt']) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasAny(['approvedBy']) && request.resource.data.approvedBy == request.auth.uid) ||
+        (signedIn() && resource.data.userId == request.auth.uid && request.resource.data.status == resource.data.status &&
+          request.resource.data.approvalStatus == resource.data.approvalStatus && request.resource.data.distributorId == resource.data.distributorId &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'mobile', 'address', 'pincode', 'vehicleType', 'vehicleNumber', 'dutyStatus', 'updatedAt']))
+      );
+      allow delete: if admin();
+    }
+
+    match /serviceAreas/{id} {
+      allow read: if true;
+      allow write: if admin() || (signedIn() && role() == 'distributor' && request.resource.data.distributorId == distributorId());
+    }
+    match /inventory/{id} {
+      allow read: if signedIn() && (admin() || (role() == 'distributor' && distributorId() == id) || role() == 'customer');
+      allow create: if admin();
+      allow update: if distributorFor(id) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['domestic', 'commercial', 'lowStockThreshold', 'updatedAt', 'distributorId']) &&
+        request.resource.data.distributorId == id;
+      allow delete: if admin();
+    }
+
+    match /bookings/{id} {
+      allow create: if signedIn() && request.resource.data.customerId == request.auth.uid &&
+        role() == 'customer' && request.resource.data.paymentStatus == 'unpaid' && request.resource.data.bookingStatus == 'pending_payment' &&
+        request.resource.data.cylinderType in ['domestic', 'commercial'] &&
+        request.resource.data.quantity > 0 && request.resource.data.quantity <= 3 && request.resource.data.totalAmount > 0;
+      allow read: if signedIn() && (resource.data.customerId == request.auth.uid || admin() ||
+        (role() == 'distributor' && resource.data.distributorId == distributorId()) ||
+        (role() == 'agent' && request.auth.uid == resource.data.deliveryAgentId));
+      allow update: if admin() ||
+        (role() == 'distributor' && resource.data.distributorId == distributorId() && resource.data.bookingStatus == 'delivered' &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bookingStatus', 'statusTimeline', 'updatedAt']) &&
+          request.resource.data.bookingStatus == 'delivered') ||
+        (role() == 'customer' && resource.data.customerId == request.auth.uid &&
+          resource.data.paymentStatus == 'unpaid' && request.resource.data.paymentStatus == 'paid' &&
+          request.resource.data.bookingStatus == 'confirmed' && request.resource.data.paymentId.matches('GBPAY-[A-Z0-9]{8}') &&
+          request.resource.data.paymentId == request.resource.data.transactionReference &&
+          request.resource.data.transactionReference.matches('GBPAY-[A-Z0-9]{8}') &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['paymentStatus', 'bookingStatus', 'paymentId', 'transactionReference', 'updatedAt', 'estimatedDelivery'])) ||
+        (role() == 'distributor' && resource.data.distributorId == distributorId() &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deliveryAgentId', 'statusTimeline', 'updatedAt']) &&
+          (request.resource.data.deliveryAgentId == resource.data.deliveryAgentId ||
+            (resource.data.bookingStatus in ['confirmed', 'processing'] && assignedAgentExists(request.resource.data.deliveryAgentId))) &&
+          (request.resource.data.deliveryAgentId == resource.data.deliveryAgentId || request.resource.data.bookingStatus == 'processing') &&
+          ((resource.data.bookingStatus == 'confirmed' && request.resource.data.bookingStatus == 'processing') ||
+           (resource.data.bookingStatus == 'confirmed' && request.resource.data.bookingStatus == 'confirmed') ||
+           (resource.data.bookingStatus == 'processing' && request.resource.data.bookingStatus == 'processing') ||
+           (resource.data.bookingStatus == 'processing' && resource.data.deliveryAgentId != '' && request.resource.data.bookingStatus == 'agent_assigned') ||
+           request.resource.data.bookingStatus == resource.data.bookingStatus)) ||
+        (role() == 'agent' && request.auth.uid == resource.data.deliveryAgentId &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bookingStatus', 'statusTimeline', 'updatedAt']) &&
+          ((resource.data.bookingStatus == 'agent_assigned' && request.resource.data.bookingStatus == 'picked_up') ||
+           (resource.data.bookingStatus == 'picked_up' && request.resource.data.bookingStatus == 'out_for_delivery') ||
+           (resource.data.bookingStatus == 'out_for_delivery' && request.resource.data.bookingStatus == 'delivered')));
+      allow delete: if admin();
+    }
+
+    match /payments/{id} {
+      allow read: if signedIn() && (resource.data.customerId == request.auth.uid || admin() ||
+        (role() == 'distributor' && get(/databases/$(database)/documents/bookings/$(resource.data.bookingId)).data.distributorId == distributorId()));
+      allow create: if signedIn() && role() == 'customer' && request.resource.data.customerId == request.auth.uid &&
+        id.matches('GBPAY-[A-Z0-9]{8}') && request.resource.data.paymentId == id &&
+        get(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.customerId == request.auth.uid &&
+        get(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.paymentStatus == 'paid' &&
+        get(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.transactionReference == id &&
+        get(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.paymentId == id &&
+        request.resource.data.transactionReference == get(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.transactionReference &&
+        !('cardNumber' in request.resource.data) && !('cvv' in request.resource.data) && !('upiPin' in request.resource.data);
+      allow update, delete: if false;
+    }
+
+    match /notifications/{id} {
+      allow read: if signedIn() && (resource.data.recipientUserId == request.auth.uid || admin());
+      allow create: if signedIn() && (admin() || request.resource.data.recipientUserId == request.auth.uid ||
+        (role() == 'distributor' && request.resource.data.recipientRole in ['customer', 'agent']));
+      allow update: if signedIn() && resource.data.recipientUserId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow delete: if admin();
+    }
+
+    match /auditLogs/{id} {
+      allow create: if signedIn() && request.resource.data.actorUserId == request.auth.uid;
+      allow read: if admin();
+      allow update, delete: if false;
+    }
+  }
+}

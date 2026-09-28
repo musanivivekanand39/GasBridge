@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Register for GasBridge LPG Delivery Management. Fueling Better Homes.">
+  <title>Register - GasBridge | Fueling Better Homes</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/auth.css">
+  <link rel="stylesheet" href="../css/responsive.css">
+</head>
+<body>
+
+  <div class="auth-wrapper">
+    <!-- Left Branded Visual Panel (Sticky on Desktop, NO SCROLLBAR - Rule 44) -->
+    <aside class="auth-sidebar" id="auth-sidebar">
+      <div class="auth-sidebar-brand">
+        <a href="../index.html" class="brand-logo" id="reg-brand-logo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path>
+          </svg>
+          <div>
+            <span>GasBridge</span>
+            <span class="tagline">Fueling Better Homes</span>
+          </div>
+        </a>
+      </div>
+
+      <div class="auth-sidebar-body">
+        <h1 class="auth-headline">
+          Your Home.<br>
+          <span class="highlight-accent">Our Priority.</span>
+        </h1>
+        <p class="auth-subtext">
+          Register once with your permanent home address and enjoy reliable LPG delivery with GasBridge.
+        </p>
+
+        <!-- 4 Core Benefits -->
+        <div class="auth-benefits">
+          <div class="auth-benefit-item">
+            <div class="auth-benefit-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <div class="auth-benefit-text">
+              <h4>One-Time Address Setup</h4>
+              <p>Your address is saved for future bookings.</p>
+            </div>
+          </div>
+
+          <div class="auth-benefit-item">
+            <div class="auth-benefit-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <div class="auth-benefit-text">
+              <h4>Automatic Distributor Assignment</h4>
+              <p>Your registered pincode routes to the authorized local distributor.</p>
+            </div>
+          </div>
+
+          <div class="auth-benefit-item">
+            <div class="auth-benefit-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <div class="auth-benefit-text">
+              <h4>Domestic &amp; Commercial Cylinders</h4>
+              <p>Tailored connection options for household kitchens and commercial users.</p>
+            </div>
+          </div>
+
+          <div class="auth-benefit-item">
+            <div class="auth-benefit-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <div class="auth-benefit-text">
+              <h4>Verified Doorstep Delivery</h4>
+              <p>Tare weight and safety seal inspection at handover.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="auth-preview-card">
+          <img src="../assets/images/home-delivery.jpg" alt="Doorstep verified LPG delivery" loading="lazy">
+          <div class="auth-preview-badge">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            <span>Verified Doorstep Handover</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="auth-sidebar-footer">
+        &copy; 2026 GasBridge &bull; Online LPG Delivery Management System
+      </div>
+    </aside>
+
+    <!-- Right Side Main Form Area (Independently Scrolls on Desktop) -->
+    <main class="auth-main">
+      <div class="auth-container wide">
+        <div class="auth-header">
+          <h1 id="step-title">Create Your GasBridge Account</h1>
+          <p id="step-subtitle">Register to get reliable LPG delivery to your home.</p>
+        </div>
+
+        <!-- Role Selection Tabs (Rule 1: Only 4 roles, no admin registration) -->
+        <div class="role-selector-bar" role="tablist" aria-label="Registration Role">
+          <button type="button" class="role-selector-tab active" id="tab-role-customer" role="tab" aria-selected="true" data-role="customer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            <span>Customer</span>
+          </button>
+          <button type="button" class="role-selector-tab" id="tab-role-distributor" role="tab" aria-selected="false" data-role="distributor">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 21h18"></path><path d="M9 8h1"></path><path d="M9 12h1"></path><path d="M9 16h1"></path><path d="M14 8h1"></path><path d="M14 12h1"></path><path d="M14 16h1"></path><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"></path></svg>
+            <span>LPG Distributor</span>
+          </button>
+          <button type="button" class="role-selector-tab" id="tab-role-agent" role="tab" aria-selected="false" data-role="agent">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+            <span>Delivery Agent</span>
+          </button>
+        </div>
+
+        <!-- ==============================================================
+             CUSTOMER REGISTRATION FLOW (4 STEPS - Rule 10, 11, 44)
+             ============================================================== -->
+        <div id="customer-flow-container">
+          <!-- 3-Step Visual Tracker (Step 4 is the waiting view) -->
+          <div class="reg-progress-tracker" aria-label="Registration Progress">
+            <div class="progress-step active" id="prog-step-1">
+              <div class="step-num" id="prog-num-1">1</div>
+              <span class="step-label">Personal</span>
+            </div>
+            <div class="progress-line" id="prog-line-1"></div>
+            <div class="progress-step" id="prog-step-2">
+              <div class="step-num" id="prog-num-2">2</div>
+              <span class="step-label">Address</span>
+            </div>
+            <div class="progress-line" id="prog-line-2"></div>
+            <div class="progress-step" id="prog-step-3">
+              <div class="step-num" id="prog-num-3">3</div>
+              <span class="step-label">Cylinder Type</span>
+            </div>
+          </div>
+
+          <form id="register-form" novalidate>
+            <!-- ================================================================
+                 STEP 1: Personal Details (Initially Visible - Rule 10, 44)
+                 ================================================================ -->
+            <div class="form-step-content" id="step-content-1">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="reg-name">Full Name *</label>
+                  <input type="text" id="reg-name" class="form-control" placeholder="e.g. Ramesh Sharma" required autocomplete="name">
+                  <div class="field-error" id="error-reg-name"></div>
+                </div>
+                <div class="form-group">
+                  <label for="reg-mobile">Mobile Number *</label>
+                  <input type="tel" id="reg-mobile" class="form-control" maxlength="10" placeholder="10-digit mobile number" required autocomplete="tel">
+                  <div class="field-error" id="error-reg-mobile"></div>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="reg-email">Email Address *</label>
+                  <input type="email" id="reg-email" class="form-control" placeholder="name@domain.com" required autocomplete="email">
+                  <div class="field-error" id="error-reg-email"></div>
+                </div>
+                <div class="form-group">
+                  <label for="reg-password">Password *</label>
+                  <div class="password-input-wrapper">
+                    <input type="password" id="reg-password" class="form-control" minlength="8" placeholder="At least 8 characters" required autocomplete="new-password">
+                    <button type="button" class="password-toggle-btn" id="toggle-password" aria-label="Toggle password visibility">
+                      <svg id="eye-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                    </button>
+                  </div>
+                  <div class="field-error" id="error-reg-password"></div>
+                </div>
+              </div>
+
+              <div class="step-actions">
+                <button type="button" class="btn-register-submit" id="btn-goto-step-2">
+                  Continue to Home Address &rarr;
+                </button>
+              </div>
+            </div>
+
+            <!-- ================================================================
+                 STEP 2: Permanent Home Address (Initially Hidden - Rule 10, 44)
+                 ================================================================ -->
+            <div class="form-step-content" id="step-content-2" style="display: none;">
+              <div class="form-section-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                <span>Permanent Home Delivery Address</span>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="reg-houseNo">House / Flat / Door Number *</label>
+                  <input type="text" id="reg-houseNo" class="form-control" placeholder="e.g. 12-45, Flat 302" required autocomplete="address-line1">
+                  <div class="field-error" id="error-reg-houseNo"></div>
+                </div>
+                <div class="form-group">
+                  <label for="reg-street">Street / Road Name *</label>
+                  <input type="text" id="reg-street" class="form-control" placeholder="e.g. Main Road, Gandhi Nagar" required autocomplete="address-line2">
+                  <div class="field-error" id="error-reg-street"></div>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="reg-area">Area / Locality *</label>
+                  <input type="text" id="reg-area" class="form-control" placeholder="e.g. Shadnagar Town" required>
+                  <div class="field-error" id="error-reg-area"></div>
+                </div>
+                <div class="form-group">
+                  <label for="reg-city">City *</label>
+                  <input type="text" id="reg-city" class="form-control" placeholder="e.g. Shadnagar" required autocomplete="address-level2">
+                  <div class="field-error" id="error-reg-city"></div>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="reg-district">District *</label>
+                  <input type="text" id="reg-district" class="form-control" placeholder="e.g. Rangareddy" required>
+                  <div class="field-error" id="error-reg-district"></div>
+                </div>
+                <div class="form-group">
+                  <label for="reg-state">State *</label>
+                  <input type="text" id="reg-state" class="form-control" placeholder="Telangana" value="Telangana" required autocomplete="address-level1">
+                  <div class="field-error" id="error-reg-state"></div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="reg-pincode">Pincode *</label>
+                <input type="text" id="reg-pincode" class="form-control" maxlength="6" placeholder="6-digit pincode (e.g. 509216)" required autocomplete="postal-code">
+                <div class="field-error" id="error-reg-pincode"></div>
+                
+                <!-- Real-time Service Area & Distributor Feedback Box -->
+                <div id="pincode-feedback-box" class="pincode-status-box" role="status" aria-live="polite"></div>
+              </div>
+
+              <div class="step-actions split">
+                <button type="button" class="btn-step-back" id="btn-back-to-step-1">
+                  &larr; Back
+                </button>
+                <button type="button" class="btn-register-submit" id="btn-goto-step-3">
+                  Continue to Cylinder Selection &rarr;
+                </button>
+              </div>
+            </div>
+
+            <!-- ================================================================
+                 STEP 3: CYLINDER TYPE SELECTION (REQUIRED - Rule 10, 11, 44)
+                 ================================================================ -->
+            <div class="form-step-content" id="step-content-3" style="display: none;">
+              <div class="form-section-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                <span>Select LPG Cylinder Type * (Required)</span>
+              </div>
+              <p style="font-size: 0.86rem; color: var(--text-muted); margin-bottom: 1rem;">
+                GasBridge requires selecting your cylinder connection type. You must choose one: Domestic or Commercial.
+              </p>
+
+              <!-- Two Explicit Choice Cards (Neither preselected - Rule 10) -->
+              <div class="cylinder-choice-grid">
+                <!-- Option 1: Domestic -->
+                <div class="cylinder-choice-card" id="choice-domestic" data-type="domestic">
+                  <div>
+                    <div style="font-size: 1.75rem; margin-bottom: 0.35rem;">🔥</div>
+                    <h3 style="font-size: 1.1rem; margin: 0; color: var(--text-main);">Domestic Cylinder</h3>
+                    <span class="cylinder-choice-badge domestic">Household Cooking</span>
+                    <p style="font-size: 0.82rem; color: var(--text-muted); margin: 0.6rem 0;">
+                      Standard 14.2 kg net weight cylinder designed for residential kitchens. Subsidized household pricing.
+                    </p>
+                  </div>
+                  <div style="font-size: 1.25rem; font-weight: 800; color: var(--primary); font-family: 'Outfit', sans-serif;">
+                    ₹950 <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">/ refill</span>
+                  </div>
+                </div>
+
+                <!-- Option 2: Commercial -->
+                <div class="cylinder-choice-card" id="choice-commercial" data-type="commercial">
+                  <div>
+                    <div style="font-size: 1.75rem; margin-bottom: 0.35rem;">🏢</div>
+                    <h3 style="font-size: 1.1rem; margin: 0; color: var(--text-main);">Commercial Cylinder</h3>
+                    <span class="cylinder-choice-badge commercial">Business & Commercial</span>
+                    <p style="font-size: 0.82rem; color: var(--text-muted); margin: 0.6rem 0;">
+                      Heavy-duty 19.0 kg high capacity blue cylinder designed for restaurants, hotels, and enterprises.
+                    </p>
+                  </div>
+                  <div style="font-size: 1.25rem; font-weight: 800; color: var(--secondary); font-family: 'Outfit', sans-serif;">
+                    ₹1,850 <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">/ refill</span>
+                  </div>
+                </div>
+              </div>
+
+              <input type="hidden" id="reg-cylinder-type" value="">
+              <div class="field-error" id="error-reg-cylinder-type" style="margin-bottom: 1rem;"></div>
+
+              <!-- Registration Review Summary -->
+              <div class="confirmation-summary-card">
+                <div class="summary-section">
+                  <div class="summary-section-header">
+                    <span class="summary-check-icon">✓</span>
+                    <h4>Account &amp; Contact</h4>
+                  </div>
+                  <div class="summary-details-grid">
+                    <div><span class="summary-label">Name:</span> <strong id="sum-name">-</strong></div>
+                    <div><span class="summary-label">Mobile:</span> <strong id="sum-mobile">-</strong></div>
+                    <div><span class="summary-label">Email:</span> <strong id="sum-email">-</strong></div>
+                  </div>
+                </div>
+
+                <div class="summary-section">
+                  <div class="summary-section-header">
+                    <span class="summary-check-icon">✓</span>
+                    <h4>Permanent Home Address</h4>
+                  </div>
+                  <p class="summary-address-text" id="sum-address">-</p>
+                </div>
+
+                <div class="summary-section">
+                  <div class="summary-section-header">
+                    <span class="summary-check-icon">✓</span>
+                    <h4>Routing &amp; Authorized Distributor</h4>
+                  </div>
+                  <div class="summary-service-box" id="sum-service-box">
+                    <!-- Populated dynamically -->
+                  </div>
+                </div>
+              </div>
+
+              <div class="step-actions split">
+                <button type="button" class="btn-step-back" id="btn-back-to-step-2">
+                  &larr; Edit Address
+                </button>
+                <button type="submit" class="btn-register-submit" id="register-submit-btn">
+                  Submit Registration &rarr;
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- ==============================================================
+             DISTRIBUTOR REGISTRATION FLOW (Rule 3)
+             ============================================================== -->
+        <div id="distributor-flow-container" style="display: none;">
+          <form id="distributor-register-form" novalidate>
+            <div style="font-size: 0.85rem; color: var(--primary); font-weight: 700; margin-bottom: 0.75rem; text-transform: uppercase;">
+              1. Personal Details
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="dist-contact-person">Full Name *</label>
+                <input type="text" id="dist-contact-person" class="form-control" placeholder="e.g. K. Venkatesh" required>
+                <div class="field-error" id="error-dist-contact-person"></div>
+              </div>
+              <div class="form-group">
+                <label for="dist-mobile">Mobile Number *</label>
+                <input type="tel" id="dist-mobile" class="form-control" maxlength="10" placeholder="10-digit mobile number" required>
+                <div class="field-error" id="error-dist-mobile"></div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="dist-email">Email Address *</label>
+                <input type="email" id="dist-email" class="form-control" placeholder="agency@domain.com" required>
+                <div class="field-error" id="error-dist-email"></div>
+              </div>
+              <div class="form-group">
+                <label for="dist-password">Password *</label>
+                <input type="password" id="dist-password" class="form-control" minlength="8" placeholder="At least 8 characters" required>
+                <div class="field-error" id="error-dist-password"></div>
+              </div>
+            </div>
+
+            <div style="font-size: 0.85rem; color: var(--primary); font-weight: 700; margin: 1.25rem 0 0.75rem; padding-top: 1rem; border-top: 1px solid var(--border); text-transform: uppercase;">
+              2. Business Details
+            </div>
+
+            <div class="form-group">
+              <label for="dist-agency-name">Distributor / Business Name *</label>
+              <input type="text" id="dist-agency-name" class="form-control" placeholder="e.g. Sri Venkateshwara LPG Agencies" required>
+              <div class="field-error" id="error-dist-agency-name"></div>
+            </div>
+
+            <div class="form-group">
+              <label for="dist-address">Business Address *</label>
+              <input type="text" id="dist-address" class="form-control" placeholder="e.g. Plot 14, Industrial Area, Near Clock Tower" required>
+              <div class="field-error" id="error-dist-address"></div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="dist-city">City *</label>
+                <input type="text" id="dist-city" class="form-control" placeholder="e.g. Shadnagar" required>
+                <div class="field-error" id="error-dist-city"></div>
+              </div>
+              <div class="form-group">
+                <label for="dist-district">District *</label>
+                <input type="text" id="dist-district" class="form-control" placeholder="e.g. Rangareddy" required>
+                <div class="field-error" id="error-dist-district"></div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="dist-state">State *</label>
+                <input type="text" id="dist-state" class="form-control" value="Telangana" placeholder="Telangana" required>
+                <div class="field-error" id="error-dist-state"></div>
+              </div>
+              <div class="form-group">
+                <label for="dist-pincode">Pincode *</label>
+                <input type="text" id="dist-pincode" class="form-control" maxlength="6" placeholder="e.g. 509216" required>
+                <div class="field-error" id="error-dist-pincode"></div>
+              </div>
+            </div>
+
+            <button type="submit" class="btn-register-submit" id="btn-submit-distributor" style="margin-top: 1.25rem; width: 100%;">
+              Register Distributor Agency &rarr;
+            </button>
+          </form>
+        </div>
+
+        <!-- ==============================================================
+             DELIVERY AGENT REGISTRATION FLOW (Rule 7)
+             ============================================================== -->
+        <div id="agent-flow-container" style="display: none;">
+          <form id="agent-register-form" novalidate>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="agent-name">Full Name *</label>
+                <input type="text" id="agent-name" class="form-control" placeholder="e.g. Mahesh Goud" required>
+                <div class="field-error" id="error-agent-name"></div>
+              </div>
+              <div class="form-group">
+                <label for="agent-mobile">Mobile Number *</label>
+                <input type="tel" id="agent-mobile" class="form-control" maxlength="10" placeholder="10-digit mobile number" required>
+                <div class="field-error" id="error-agent-mobile"></div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="agent-email">Email Address *</label>
+                <input type="email" id="agent-email" class="form-control" placeholder="agent@domain.com" required>
+                <div class="field-error" id="error-agent-email"></div>
+              </div>
+              <div class="form-group">
+                <label for="agent-password">Password *</label>
+                <input type="password" id="agent-password" class="form-control" minlength="8" placeholder="At least 8 characters" required>
+                <div class="field-error" id="error-agent-password"></div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="agent-address">Residential Address *</label>
+              <input type="text" id="agent-address" class="form-control" placeholder="e.g. Near Bus Stand, Gandhi Nagar, Shadnagar" required>
+              <div class="field-error" id="error-agent-address"></div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="agent-pincode">Pincode *</label>
+                <input type="text" id="agent-pincode" class="form-control" maxlength="6" placeholder="e.g. 509216" required>
+                <div class="field-error" id="error-agent-pincode"></div>
+              </div>
+              <div class="form-group">
+                <label for="agent-distributor-select">Distributor to Work With *</label>
+                <select id="agent-distributor-select" class="form-control" required>
+                  <option value="">Select Associated Distributor...</option>
+                </select>
+                <div class="field-error" id="error-agent-distributor"></div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="agent-vehicle-type">Delivery Vehicle Type</label>
+                <select id="agent-vehicle-type" class="form-control">
+                  <option value="Tata Ace Delivery Van">Tata Ace Delivery Van</option>
+                  <option value="Mahindra Bolero Maxi Truck">Mahindra Bolero Maxi Truck</option>
+                  <option value="Three-Wheeler LPG Cargo Auto">Three-Wheeler LPG Cargo Auto</option>
+                  <option value="Two-Wheeler with Cylinder Carrier">Two-Wheeler with Cylinder Carrier</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="agent-vehicle-number">Vehicle Registration Number</label>
+                <input type="text" id="agent-vehicle-number" class="form-control" placeholder="e.g. TS 08 UB 4512">
+              </div>
+            </div>
+
+            <button type="submit" class="btn-register-submit" id="btn-submit-agent" style="margin-top: 1.25rem; width: 100%;">
+              Submit Delivery Agent Registration &rarr;
+            </button>
+          </form>
+        </div>
+
+        <!-- ==============================================================
+             STEP 4 / APPROVAL STATUS SCREEN (Rule 3, 7, 10, 44, 45)
+             ============================================================== -->
+        <div id="approval-status-view" class="success-state-modal" style="display: none;">
+          <div class="success-icon-badge" style="background: #fef3c7; color: #b45309;">
+            ⏳
+          </div>
+          <div id="success-status-badge-container" style="margin-bottom: 0.5rem;">
+            <span class="approval-badge pending" id="status-view-badge">Pending Approval</span>
+          </div>
+          <h2 id="success-status-title" style="font-family: 'Outfit', sans-serif; font-size: 1.55rem; margin-bottom: 0.5rem; color: var(--text-main);">Registration Submitted Successfully</h2>
+          <div id="success-status-desc" style="color: var(--text-muted); font-size: 0.92rem; line-height: 1.55; max-width: 500px; margin: 0 auto 1.75rem;">
+            Your registration is waiting for approval.
+          </div>
+          <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
+            <a href="login.html" class="btn btn-primary" id="btn-success-login" style="padding: 0.75rem 1.75rem;">Go to Sign In &rarr;</a>
+            <button type="button" class="btn btn-outline" id="btn-success-another" style="padding: 0.75rem 1.5rem;">Register Another Account</button>
+          </div>
+        </div>
+
+        <div class="auth-footer" id="common-auth-footer">
+          Already registered? <a href="login.html" style="font-weight: 700;">Sign in here</a>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module">
+    import { registerCustomer, registerDistributor, registerDeliveryAgent } from "../js/auth.js";
+    import { resolveServiceAreaByPincode, getDistributors } from "../js/firestore.js";
+    import { showToast } from "../js/utils.js";
+
+    // --------------------------------------------------------------------------
+    // Role Switching
+    // --------------------------------------------------------------------------
+    const tabCustomer = document.getElementById('tab-role-customer');
+    const tabDistributor = document.getElementById('tab-role-distributor');
+    const tabAgent = document.getElementById('tab-role-agent');
+
+    const customerFlow = document.getElementById('customer-flow-container');
+    const distributorFlow = document.getElementById('distributor-flow-container');
+    const agentFlow = document.getElementById('agent-flow-container');
+    const approvalStatusView = document.getElementById('approval-status-view');
+    const commonAuthFooter = document.getElementById('common-auth-footer');
+
+    const stepTitle = document.getElementById('step-title');
+    const stepSubtitle = document.getElementById('step-subtitle');
+
+    const sidebarHeadline = document.querySelector('.auth-headline');
+    const sidebarSubtext = document.querySelector('.auth-subtext');
+    const sidebarImg = document.querySelector('.auth-preview-card img');
+    const sidebarBadge = document.querySelector('.auth-preview-badge span');
+
+    const ROLE_SIDEBAR_CONTENT = {
+      customer: {
+        title: "Create Your GasBridge Account",
+        subtitle: "Register once with your home address for reliable LPG delivery.",
+        headline: `Your Home.<br><span class="highlight-accent">Our Priority.</span>`,
+        subtext: "Register once with your permanent home address and enjoy reliable LPG delivery with GasBridge.",
+        img: "../assets/images/home-delivery.jpg",
+        badge: "Verified Doorstep Handover"
+      },
+      distributor: {
+        title: "Register LPG Distributor",
+        subtitle: "Onboard your agency to manage service area bookings & inventory.",
+        headline: `Depot Partner.<br><span class="highlight-accent">Scale LPG Delivery.</span>`,
+        subtext: "Register your authorized LPG distribution agency. Access bookings and delivery personnel upon Admin approval.",
+        img: "../assets/images/lpg-vehicle.jpg",
+        badge: "Requires Admin Approval"
+      },
+      agent: {
+        title: "Register Delivery Agent",
+        subtitle: "Register as an authorized LPG cylinder delivery agent.",
+        headline: `Last-Mile Hero.<br><span class="highlight-accent">Join the Fleet.</span>`,
+        subtext: "Register as a delivery agent. Associate with your local depot distributor for verified doorstep handovers.",
+        img: "../assets/images/lpg-cylinder.jpg",
+        badge: "Requires Distributor Approval"
+      }
+    };
+
+    async function loadDistributorsDropdown() {
+      const select = document.getElementById('agent-distributor-select');
+      if (!select) return;
+      const dists = await getDistributors();
+      const active = dists.filter(d => d.status === 'approved' || d.approvalStatus === 'approved' || d.active !== false);
+      select.innerHTML = '<option value="">Select Associated Distributor...</option>' + 
+        active.map(d => `<option value="${d.id}">${d.name} (${d.city || 'Depot'} - PIN: ${d.pincode || (d.pincodes ? d.pincodes[0] : '')})</option>`).join('');
+    }
+    loadDistributorsDropdown();
+
+    function switchRole(role) {
+      [tabCustomer, tabDistributor, tabAgent].forEach(t => {
+        const isActive = t.dataset.role === role;
+        t.classList.toggle('active', isActive);
+        t.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      });
+
+      customerFlow.style.display = role === 'customer' ? 'block' : 'none';
+      distributorFlow.style.display = role === 'distributor' ? 'block' : 'none';
+      agentFlow.style.display = role === 'agent' ? 'block' : 'none';
+      approvalStatusView.style.display = 'none';
+      commonAuthFooter.style.display = 'block';
+
+      const content = ROLE_SIDEBAR_CONTENT[role] || ROLE_SIDEBAR_CONTENT.customer;
+      if (stepTitle) stepTitle.textContent = content.title;
+      if (stepSubtitle) stepSubtitle.textContent = content.subtitle;
+      if (sidebarHeadline) sidebarHeadline.innerHTML = content.headline;
+      if (sidebarSubtext) sidebarSubtext.textContent = content.subtext;
+      if (sidebarImg) sidebarImg.src = content.img;
+      if (sidebarBadge) sidebarBadge.textContent = content.badge;
+
+      const mainContainer = document.querySelector('.auth-main');
+      if (mainContainer) mainContainer.scrollTop = 0;
+    }
+
+    tabCustomer.addEventListener('click', () => switchRole('customer'));
+    tabDistributor.addEventListener('click', () => switchRole('distributor'));
+    tabAgent.addEventListener('click', () => switchRole('agent'));
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialRole = urlParams.get('role');
+    if (initialRole && ['customer', 'distributor', 'agent'].includes(initialRole.toLowerCase())) {
+      switchRole(initialRole.toLowerCase());
+    }
+
+    // Step Elements for Customer
+    const step1 = document.getElementById('step-content-1');
+    const step2 = document.getElementById('step-content-2');
+    const step3 = document.getElementById('step-content-3');
+
+    const progStep1 = document.getElementById('prog-step-1');
+    const progStep2 = document.getElementById('prog-step-2');
+    const progStep3 = document.getElementById('prog-step-3');
+
+    const progNum1 = document.getElementById('prog-num-1');
+    const progNum2 = document.getElementById('prog-num-2');
+    const progNum3 = document.getElementById('prog-num-3');
+
+    const progLine1 = document.getElementById('prog-line-1');
+    const progLine2 = document.getElementById('prog-line-2');
+
+    // Navigation Buttons
+    const btnGotoStep2 = document.getElementById('btn-goto-step-2');
+    const btnBackToStep1 = document.getElementById('btn-back-to-step-1');
+    const btnGotoStep3 = document.getElementById('btn-goto-step-3');
+    const btnBackToStep2 = document.getElementById('btn-back-to-step-2');
+    const submitBtn = document.getElementById('register-submit-btn');
+
+    // Step 1 Inputs
+    const nameInput = document.getElementById('reg-name');
+    const mobileInput = document.getElementById('reg-mobile');
+    const emailInput = document.getElementById('reg-email');
+    const passwordInput = document.getElementById('reg-password');
+    const togglePasswordBtn = document.getElementById('toggle-password');
+
+    // Step 2 Inputs
+    const houseNoInput = document.getElementById('reg-houseNo');
+    const streetInput = document.getElementById('reg-street');
+    const areaInput = document.getElementById('reg-area');
+    const cityInput = document.getElementById('reg-city');
+    const districtInput = document.getElementById('reg-district');
+    const stateInput = document.getElementById('reg-state');
+    const pincodeInput = document.getElementById('reg-pincode');
+    const feedbackBox = document.getElementById('pincode-feedback-box');
+
+    // Step 3 Elements (Cylinder Choice)
+    const choiceDomestic = document.getElementById('choice-domestic');
+    const choiceCommercial = document.getElementById('choice-commercial');
+    const cylinderTypeInput = document.getElementById('reg-cylinder-type');
+    const errorCylinderType = document.getElementById('error-reg-cylinder-type');
+
+    // Summary Elements
+    const sumName = document.getElementById('sum-name');
+    const sumMobile = document.getElementById('sum-mobile');
+    const sumEmail = document.getElementById('sum-email');
+    const sumAddress = document.getElementById('sum-address');
+    const sumServiceBox = document.getElementById('sum-service-box');
+
+    let currentStep = 1;
+    let resolvedServiceArea = null;
+    let resolvedDistributor = null;
+
+    // Helper: Show/Clear Field Error
+    function setFieldError(inputEl, errorId, message) {
+      const errEl = document.getElementById(errorId);
+      if (inputEl) {
+        if (message) inputEl.classList.add('input-error');
+        else inputEl.classList.remove('input-error');
+      }
+      if (errEl) {
+        if (message) {
+          errEl.textContent = message;
+          errEl.classList.add('active');
+        } else {
+          errEl.textContent = '';
+          errEl.classList.remove('active');
+        }
+      }
+    }
+
+    [nameInput, mobileInput, emailInput, passwordInput, houseNoInput, streetInput, areaInput, cityInput, districtInput, stateInput, pincodeInput].forEach(inp => {
+      inp.addEventListener('input', () => {
+        setFieldError(inp, `error-${inp.id}`, null);
+      });
+    });
+
+    // Password Visibility Toggle
+    if (togglePasswordBtn && passwordInput) {
+      togglePasswordBtn.addEventListener('click', () => {
+        const isPassword = passwordInput.type === 'password';
+        passwordInput.type = isPassword ? 'text' : 'password';
+        togglePasswordBtn.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+        togglePasswordBtn.innerHTML = isPassword
+          ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`
+          : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
+      });
+    }
+
+    // Cylinder Type Selection Listeners (Rule 10: DO NOT auto select domestic!)
+    choiceDomestic.addEventListener('click', () => {
+      cylinderTypeInput.value = 'domestic';
+      choiceDomestic.classList.add('selected');
+      choiceCommercial.classList.remove('selected');
+      setFieldError(null, 'error-reg-cylinder-type', null);
+      updateSummaryServiceBox();
+    });
+
+    choiceCommercial.addEventListener('click', () => {
+      cylinderTypeInput.value = 'commercial';
+      choiceCommercial.classList.add('selected');
+      choiceDomestic.classList.remove('selected');
+      setFieldError(null, 'error-reg-cylinder-type', null);
+      updateSummaryServiceBox();
+    });
+
+    // Real-time Pincode Coverage Checker (Rule 12)
+    let debounceTimer;
+    pincodeInput.addEventListener('input', () => {
+      clearTimeout(debounceTimer);
+      const val = pincodeInput.value.trim();
+
+      if (val.length === 6) {
+        feedbackBox.className = 'pincode-status-box active loading';
+        feedbackBox.textContent = "Checking service area coverage...";
+
+        debounceTimer = setTimeout(async () => {
+          try {
+            const res = await resolveServiceAreaByPincode(val);
+            if (res.supported) {
+              resolvedServiceArea = res.serviceArea;
+              resolvedDistributor = res.distributor;
+              feedbackBox.className = 'pincode-status-box active success';
+              feedbackBox.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span><strong>✓ Service Area: ${res.serviceArea.name}</strong> &bull; Authorized Distributor: ${res.distributor ? res.distributor.name : 'Assigned Depot'}</span>
+              `;
+            } else {
+              resolvedServiceArea = null;
+              resolvedDistributor = null;
+              feedbackBox.className = 'pincode-status-box active error';
+              feedbackBox.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                <span>GasBridge is currently unavailable in this pincode. Supported test pincodes: <strong>509216</strong>, <strong>509301</strong>, <strong>509001</strong>.</span>
+              `;
+            }
+          } catch (e) {
+            feedbackBox.className = 'pincode-status-box active error';
+            feedbackBox.textContent = "Unable to verify pincode at this moment.";
+          }
+        }, 250);
+      } else {
+        feedbackBox.className = 'pincode-status-box';
+        feedbackBox.innerHTML = '';
+        resolvedServiceArea = null;
+        resolvedDistributor = null;
+      }
+    });
+
+    function goToStep(targetStep) {
+      currentStep = targetStep;
+      step1.style.display = targetStep === 1 ? 'block' : 'none';
+      step2.style.display = targetStep === 2 ? 'block' : 'none';
+      step3.style.display = targetStep === 3 ? 'block' : 'none';
+
+      if (targetStep === 1) {
+        stepTitle.textContent = "Create Your GasBridge Account";
+        stepSubtitle.textContent = "Step 1: Enter your personal contact details.";
+      } else if (targetStep === 2) {
+        stepTitle.textContent = "Permanent Home Address";
+        stepSubtitle.textContent = "Step 2: Enter your permanent delivery address. Used automatically for future refills.";
+      } else if (targetStep === 3) {
+        stepTitle.textContent = "Select Cylinder Type";
+        stepSubtitle.textContent = "Step 3: Choose Domestic or Commercial cylinder connection.";
+      }
+
+      const checkSVG = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+
+      if (targetStep === 1) {
+        progStep1.className = 'progress-step active';
+        progNum1.textContent = '1';
+        progLine1.className = 'progress-line';
+        progStep2.className = 'progress-step';
+        progNum2.textContent = '2';
+        progLine2.className = 'progress-line';
+        progStep3.className = 'progress-step';
+        progNum3.textContent = '3';
+      } else if (targetStep === 2) {
+        progStep1.className = 'progress-step completed';
+        progNum1.innerHTML = checkSVG;
+        progLine1.className = 'progress-line active';
+        progStep2.className = 'progress-step active';
+        progNum2.textContent = '2';
+        progLine2.className = 'progress-line';
+        progStep3.className = 'progress-step';
+        progNum3.textContent = '3';
+      } else if (targetStep === 3) {
+        progStep1.className = 'progress-step completed';
+        progNum1.innerHTML = checkSVG;
+        progLine1.className = 'progress-line active';
+        progStep2.className = 'progress-step completed';
+        progNum2.innerHTML = checkSVG;
+        progLine2.className = 'progress-line active';
+        progStep3.className = 'progress-step active';
+        progNum3.textContent = '3';
+      }
+
+      const mainContainer = document.querySelector('.auth-main');
+      if (mainContainer) mainContainer.scrollTop = 0;
+    }
+
+    function validateStep1() {
+      let isValid = true;
+      const name = nameInput.value.trim();
+      const mobile = mobileInput.value.trim().replace(/\D/g, '');
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+
+      if (!name) {
+        setFieldError(nameInput, 'error-reg-name', 'Please enter your full name.');
+        isValid = false;
+      } else setFieldError(nameInput, 'error-reg-name', null);
+
+      if (!mobile || mobile.length !== 10) {
+        setFieldError(mobileInput, 'error-reg-mobile', 'Please enter a valid 10-digit mobile number.');
+        isValid = false;
+      } else setFieldError(mobileInput, 'error-reg-mobile', null);
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!email || !emailRegex.test(email)) {
+        setFieldError(emailInput, 'error-reg-email', 'Please enter a valid email address.');
+        isValid = false;
+      } else setFieldError(emailInput, 'error-reg-email', null);
+
+      if (!password || password.length < 8) {
+        setFieldError(passwordInput, 'error-reg-password', 'Password must be at least 8 characters long.');
+        isValid = false;
+      } else setFieldError(passwordInput, 'error-reg-password', null);
+
+      return isValid;
+    }
+
+    async function validateStep2() {
+      let isValid = true;
+      const houseNo = houseNoInput.value.trim();
+      const street = streetInput.value.trim();
+      const area = areaInput.value.trim();
+      const city = cityInput.value.trim();
+      const district = districtInput.value.trim();
+      const state = stateInput.value.trim();
+      const pincode = pincodeInput.value.trim();
+
+      if (!houseNo) { setFieldError(houseNoInput, 'error-reg-houseNo', 'House / Flat / Door Number is required.'); isValid = false; }
+      else setFieldError(houseNoInput, 'error-reg-houseNo', null);
+
+      if (!street) { setFieldError(streetInput, 'error-reg-street', 'Street / Road Name is required.'); isValid = false; }
+      else setFieldError(streetInput, 'error-reg-street', null);
+
+      if (!area) { setFieldError(areaInput, 'error-reg-area', 'Area / Locality is required.'); isValid = false; }
+      else setFieldError(areaInput, 'error-reg-area', null);
+
+      if (!city) { setFieldError(cityInput, 'error-reg-city', 'City is required.'); isValid = false; }
+      else setFieldError(cityInput, 'error-reg-city', null);
+
+      if (!district) { setFieldError(districtInput, 'error-reg-district', 'District is required.'); isValid = false; }
+      else setFieldError(districtInput, 'error-reg-district', null);
+
+      if (!state) { setFieldError(stateInput, 'error-reg-state', 'State is required.'); isValid = false; }
+      else setFieldError(stateInput, 'error-reg-state', null);
+
+      if (!pincode || pincode.length !== 6 || !/^\d{6}$/.test(pincode)) {
+        setFieldError(pincodeInput, 'error-reg-pincode', 'Please enter a valid 6-digit postal pincode.');
+        isValid = false;
+      } else setFieldError(pincodeInput, 'error-reg-pincode', null);
+
+      if (!isValid) return false;
+
+      btnGotoStep3.disabled = true;
+      btnGotoStep3.textContent = "Verifying Area Coverage...";
+
+      try {
+        const res = await resolveServiceAreaByPincode(pincode);
+        btnGotoStep3.disabled = false;
+        btnGotoStep3.innerHTML = `Continue to Cylinder Selection &rarr;`;
+
+        if (!res.supported || !res.distributor) {
+          setFieldError(pincodeInput, 'error-reg-pincode', res.message || 'No approved distributor currently serves this pincode.');
+          return false;
+        }
+
+        resolvedServiceArea = res.serviceArea;
+        resolvedDistributor = res.distributor;
+        return true;
+      } catch (e) {
+        btnGotoStep3.disabled = false;
+        btnGotoStep3.innerHTML = `Continue to Cylinder Selection &rarr;`;
+        setFieldError(pincodeInput, 'error-reg-pincode', e.message || 'Unable to verify this service area. Check Firebase connectivity.');
+        return false;
+      }
+    }
+
+    function updateSummaryServiceBox() {
+      const saName = resolvedServiceArea ? resolvedServiceArea.name : "Regional Service Area";
+      const distName = resolvedDistributor ? resolvedDistributor.name : "Authorized GasBridge Depot";
+      const chosenType = cylinderTypeInput.value ? (cylinderTypeInput.value === 'domestic' ? 'Domestic (14.2 kg)' : 'Commercial (19.0 kg)') : 'Not Selected Yet';
+
+      sumServiceBox.innerHTML = `
+        <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">Service Area: ${saName}</div>
+        <div style="font-size: 0.85rem; color: #15803d; font-weight: 600;">Authorized Distributor: ${distName}</div>
+        <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.25rem;">Selected Cylinder: <strong>${chosenType}</strong></div>
+      `;
+    }
+
+    function populateStep3Summary() {
+      sumName.textContent = nameInput.value.trim();
+      sumMobile.textContent = `+91 ${mobileInput.value.trim()}`;
+      sumEmail.textContent = emailInput.value.trim();
+
+      const addrParts = [
+        houseNoInput.value.trim(),
+        streetInput.value.trim(),
+        areaInput.value.trim(),
+        cityInput.value.trim(),
+        districtInput.value.trim(),
+        `${stateInput.value.trim()} - ${pincodeInput.value.trim()}`
+      ].filter(Boolean);
+
+      sumAddress.textContent = addrParts.join(', ');
+      updateSummaryServiceBox();
+    }
+
+    btnGotoStep2.addEventListener('click', () => {
+      if (validateStep1()) goToStep(2);
+    });
+
+    btnBackToStep1.addEventListener('click', () => goToStep(1));
+
+    btnGotoStep3.addEventListener('click', async () => {
+      const valid = await validateStep2();
+      if (valid) {
+        populateStep3Summary();
+        goToStep(3);
+      }
+    });
+
+    btnBackToStep2.addEventListener('click', () => goToStep(2));
+
+    // --------------------------------------------------------------------------
+    // Final Step 3 Submit: Customer Registration
+    // --------------------------------------------------------------------------
+    const form = document.getElementById('register-form');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      if (!validateStep1()) { goToStep(1); return; }
+
+      // Validate Mandatory Cylinder Type (Rule 10)
+      const selectedType = cylinderTypeInput.value;
+      if (!selectedType || (selectedType !== 'domestic' && selectedType !== 'commercial')) {
+        setFieldError(null, 'error-reg-cylinder-type', 'Please select either Domestic Cylinder or Commercial Cylinder to continue.');
+        return;
+      }
+      setFieldError(null, 'error-reg-cylinder-type', null);
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<span>Submitting Registration to Distributor...</span>`;
+
+      const formData = {
+        name: nameInput.value.trim(),
+        mobile: mobileInput.value.trim(),
+        email: emailInput.value.trim(),
+        password: passwordInput.value,
+        houseNo: houseNoInput.value.trim(),
+        street: streetInput.value.trim(),
+        area: areaInput.value.trim(),
+        city: cityInput.value.trim(),
+        district: districtInput.value.trim(),
+        state: stateInput.value.trim(),
+        pincode: pincodeInput.value.trim(),
+        cylinderType: selectedType
+      };
+
+      try {
+        const res = await registerCustomer(formData);
+        showToast("Registration Submitted", "Registration submitted successfully.", "success");
+
+        customerFlow.style.display = 'none';
+        distributorFlow.style.display = 'none';
+        agentFlow.style.display = 'none';
+        commonAuthFooter.style.display = 'none';
+
+        document.getElementById('status-view-badge').className = "approval-badge pending";
+        document.getElementById('status-view-badge').textContent = "Pending Distributor Approval";
+        document.getElementById('success-status-title').textContent = "Registration submitted successfully.";
+        document.getElementById('success-status-desc').innerHTML = `
+          <p style="font-size: 1.05rem; font-weight: 600; color: #92400e; margin-bottom: 0.75rem;">
+            Your customer registration is waiting for distributor approval.
+          </p>
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; text-align: left; margin: 1rem 0; font-size: 0.88rem; line-height: 1.6;">
+            <div><strong>Applicant:</strong> ${formData.name} (${formData.email})</div>
+            <div><strong>Cylinder Connection:</strong> ${selectedType === 'domestic' ? 'Domestic LPG (14.2 kg)' : 'Commercial LPG (19.0 kg)'}</div>
+            <div><strong>Assigned Distributor:</strong> 🏢 ${res.customerProfile.distributorName || 'Authorized Local Distributor'}</div>
+            <div><strong>Service Area:</strong> ${res.customerProfile.serviceAreaName || 'Local Area'} (PIN: ${formData.pincode})</div>
+            <div><strong>Permanent Address:</strong> ${formData.houseNo}, ${formData.street}, ${formData.city}</div>
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">
+            Your local distributor verifies customer addresses to ensure unique household registration and prevent duplicate connections. You will receive an approval confirmation once authorized.
+          </p>
+        `;
+        approvalStatusView.style.display = 'block';
+
+      } catch (err) {
+        showToast("Registration Failed", err.message, "error");
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `Submit Registration &rarr;`;
+      }
+    });
+
+    // --------------------------------------------------------------------------
+    // Distributor Registration Logic (Rule 3)
+    // --------------------------------------------------------------------------
+    const distForm = document.getElementById('distributor-register-form');
+    const btnSubmitDistributor = document.getElementById('btn-submit-distributor');
+
+    distForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const contactPerson = document.getElementById('dist-contact-person').value.trim();
+      const mobile = document.getElementById('dist-mobile').value.trim();
+      const email = document.getElementById('dist-email').value.trim();
+      const password = document.getElementById('dist-password').value;
+      const businessName = document.getElementById('dist-agency-name').value.trim();
+      const address = document.getElementById('dist-address').value.trim();
+      const city = document.getElementById('dist-city').value.trim();
+      const district = document.getElementById('dist-district').value.trim();
+      const state = document.getElementById('dist-state').value.trim();
+      const pincode = document.getElementById('dist-pincode').value.trim();
+
+      if (!contactPerson || !mobile || !email || !password || !businessName || !address || !city || !district || !pincode) {
+        showToast("Incomplete Form", "Please fill in all personal and business fields.", "warning");
+        return;
+      }
+
+      btnSubmitDistributor.disabled = true;
+      btnSubmitDistributor.innerHTML = `<span>Submitting for Administrator Approval...</span>`;
+
+      try {
+        const res = await registerDistributor({
+          name: contactPerson,
+          contactPerson,
+          mobile,
+          email,
+          password,
+          businessName,
+          agencyName: businessName,
+          address,
+          city,
+          district,
+          state,
+          pincode
+        });
+
+        showToast("Registration Submitted", "Registration submitted successfully.", "success");
+
+        customerFlow.style.display = 'none';
+        distributorFlow.style.display = 'none';
+        agentFlow.style.display = 'none';
+        commonAuthFooter.style.display = 'none';
+
+        document.getElementById('status-view-badge').className = "approval-badge pending";
+        document.getElementById('status-view-badge').textContent = "Pending Administrator Approval";
+        document.getElementById('success-status-title').textContent = "Registration submitted successfully.";
+        document.getElementById('success-status-desc').innerHTML = `
+          <p style="font-size: 1.05rem; font-weight: 600; color: #92400e; margin-bottom: 0.75rem;">
+            Your distributor account is waiting for administrator approval.
+          </p>
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; text-align: left; margin: 1rem 0; font-size: 0.88rem; line-height: 1.6;">
+            <div><strong>Distributor Agency:</strong> ${businessName}</div>
+            <div><strong>Contact Person:</strong> ${contactPerson}</div>
+            <div><strong>Email:</strong> ${email} | <strong>Mobile:</strong> ${mobile}</div>
+            <div><strong>Depot Address:</strong> ${address}, ${city}, ${district} (${pincode})</div>
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">
+            The single GasBridge Administrator must review and approve your distributor profile before dashboard access is permitted.
+          </p>
+        `;
+        approvalStatusView.style.display = 'block';
+
+      } catch (err) {
+        showToast("Registration Failed", err.message, "error");
+        btnSubmitDistributor.disabled = false;
+        btnSubmitDistributor.innerHTML = `Register Distributor Agency &rarr;`;
+      }
+    });
+
+    // --------------------------------------------------------------------------
+    // Delivery Agent Registration Logic (Rule 7)
+    // --------------------------------------------------------------------------
+    const agentForm = document.getElementById('agent-register-form');
+    const btnSubmitAgent = document.getElementById('btn-submit-agent');
+    const agentPincodeInput = document.getElementById('agent-pincode');
+    const agentDistSelect = document.getElementById('agent-distributor-select');
+
+    if (agentPincodeInput && agentDistSelect) {
+      agentPincodeInput.addEventListener('input', async () => {
+        const pin = agentPincodeInput.value.trim();
+        if (pin.length === 6) {
+          const res = await resolveServiceAreaByPincode(pin);
+          if (res.supported && res.distributor) {
+            agentDistSelect.value = res.distributor.id;
+          }
+        }
+      });
+    }
+
+    agentForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const name = document.getElementById('agent-name').value.trim();
+      const mobile = document.getElementById('agent-mobile').value.trim();
+      const email = document.getElementById('agent-email').value.trim();
+      const password = document.getElementById('agent-password').value;
+      const address = document.getElementById('agent-address').value.trim();
+      const pincode = document.getElementById('agent-pincode').value.trim();
+      const distributorId = document.getElementById('agent-distributor-select').value;
+      const vehicleType = document.getElementById('agent-vehicle-type').value;
+      const vehicleNumber = document.getElementById('agent-vehicle-number').value.trim();
+
+      if (!name || !email || !mobile || !password || !address || !pincode || !distributorId) {
+        showToast("Incomplete Form", "Please fill in all personal, address, and distributor fields.", "warning");
+        return;
+      }
+
+      btnSubmitAgent.disabled = true;
+      btnSubmitAgent.innerHTML = `<span>Submitting for Distributor Approval...</span>`;
+
+      try {
+        const res = await registerDeliveryAgent({
+          name,
+          mobile,
+          email,
+          password,
+          address,
+          pincode,
+          distributorId,
+          vehicleType,
+          vehicleNumber
+        });
+
+        showToast("Registration Submitted", "Registration submitted successfully.", "success");
+
+        customerFlow.style.display = 'none';
+        distributorFlow.style.display = 'none';
+        agentFlow.style.display = 'none';
+        commonAuthFooter.style.display = 'none';
+
+        document.getElementById('status-view-badge').className = "approval-badge pending";
+        document.getElementById('status-view-badge').textContent = "Pending Distributor Approval";
+        document.getElementById('success-status-title').textContent = "Registration submitted successfully.";
+        document.getElementById('success-status-desc').innerHTML = `
+          <p style="font-size: 1.05rem; font-weight: 600; color: #92400e; margin-bottom: 0.75rem;">
+            Your delivery agent registration is waiting for distributor approval.
+          </p>
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; text-align: left; margin: 1rem 0; font-size: 0.88rem; line-height: 1.6;">
+            <div><strong>Agent Name:</strong> ${name} (${email})</div>
+            <div><strong>Mobile:</strong> ${mobile}</div>
+            <div><strong>Operating Pincode:</strong> ${pincode}</div>
+            <div><strong>Associated Distributor:</strong> ${agentDistSelect.options[agentDistSelect.selectedIndex].text}</div>
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">
+            The authorized depot distributor must review and accept your agent application before delivery tasks can be assigned.
+          </p>
+        `;
+        approvalStatusView.style.display = 'block';
+
+      } catch (err) {
+        showToast("Submission Failed", err.message, "error");
+        btnSubmitAgent.disabled = false;
+        btnSubmitAgent.innerHTML = `Submit Delivery Agent Registration &rarr;`;
+      }
+    });
+
+    document.getElementById('btn-success-another').addEventListener('click', () => {
+      window.location.reload();
+    });
+  </script>
+</body>
+</html>

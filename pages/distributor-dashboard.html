@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Authorized Distributor Dashboard - GasBridge LPG Distribution Depot.">
+  <title>Distributor Dashboard - GasBridge</title>
+  
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/dashboard.css">
+  <link rel="stylesheet" href="../css/responsive.css">
+</head>
+<body>
+
+  <div class="dashboard-layout">
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <a href="distributor-dashboard.html" class="brand-logo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path>
+          </svg>
+          <div>
+            <span>GasBridge</span>
+            <span class="sidebar-role-badge role-distributor">Distributor</span>
+          </div>
+        </a>
+      </div>
+
+      <nav class="sidebar-nav">
+        <span class="nav-category">Depot Management</span>
+        <a href="distributor-dashboard.html" class="sidebar-link active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          Dashboard
+        </a>
+        <a href="distributor-bookings.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+          Area Bookings
+        </a>
+        <a href="distributor-inventory.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+          LPG Inventory
+        </a>
+        <a href="distributor-agents.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          Delivery Agents
+        </a>
+        <a href="distributor-customers.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          Area Customers
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-mini-profile">
+          <div class="user-avatar" id="sidebar-user-avatar">D</div>
+          <div class="user-info">
+            <span class="user-name" id="sidebar-user-name">Distributor</span>
+            <span class="user-email" id="sidebar-user-email">-</span>
+          </div>
+        </div>
+        <button class="btn-icon" id="logout-btn" title="Sign Out">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+        </button>
+      </div>
+    </aside>
+
+    <div class="dashboard-main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="mobile-toggle" id="sidebar-toggle-btn">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+          </button>
+          <h2 class="page-title">Authorized Distributor Depot Console</h2>
+        </div>
+
+        <div class="topbar-right">
+          <div class="notification-wrapper"></div>
+          <a href="distributor-inventory.html" class="btn btn-secondary btn-sm">+ Add Stock</a>
+        </div>
+      </header>
+
+      <main class="dashboard-content">
+        <!-- Low Stock Warning Banner -->
+        <div id="distributor-stock-alert" class="card" style="display: none; background: #fff7ed; border-left: 5px solid var(--secondary); color: #c2410c; padding: 1rem 1.25rem;"></div>
+
+        <!-- Pending Customer Connections Banner -->
+        <div id="distributor-customer-alert" style="display: none; background: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid var(--primary); padding: 1rem 1.25rem; border-radius: var(--radius-md); margin-bottom: 1.5rem; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span style="font-size: 1.5rem;">🛡️</span>
+            <div>
+              <strong style="color: #1e40af;">New Customer Connections Awaiting Verification</strong>
+              <p style="font-size: 0.85rem; color: #1d4ed8; margin: 0.15rem 0 0 0;" id="distributor-customer-alert-text">Customer registrations in your service area require address verification to prevent duplicate accounts.</p>
+            </div>
+          </div>
+          <a href="distributor-customers.html" class="btn btn-primary btn-sm" style="font-weight: 700; white-space: nowrap;">Review Customers &rarr;</a>
+        </div>
+
+        <!-- Pending Agent Application Banner -->
+        <div id="distributor-agent-alert" style="display: none; background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid var(--warning); padding: 1rem 1.25rem; border-radius: var(--radius-md); margin-bottom: 1.5rem; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <span style="font-size: 1.5rem;">🛵</span>
+            <div>
+              <strong style="color: #92400e;">New Delivery Agent Applications Waiting</strong>
+              <p style="font-size: 0.85rem; color: #b45309; margin: 0.15rem 0 0 0;" id="distributor-agent-alert-text">Delivery agents have applied for service in your depot's jurisdiction.</p>
+            </div>
+          </div>
+          <a href="distributor-agents.html" class="btn btn-warning btn-sm" style="font-weight: 700; white-space: nowrap;">Review Applications &rarr;</a>
+        </div>
+
+        <!-- KPI Grid -->
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-info">
+              <span class="kpi-label">Today's Bookings</span>
+              <span class="kpi-value" id="kpi-today-bookings">0</span>
+            </div>
+            <div class="kpi-icon green">📦</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-info">
+              <span class="kpi-label">Pending Assignment</span>
+              <span class="kpi-value" id="kpi-pending-assignment">0</span>
+            </div>
+            <div class="kpi-icon orange">⏳</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-info">
+              <span class="kpi-label">Processing / In Route</span>
+              <span class="kpi-value" id="kpi-processing">0</span>
+            </div>
+            <div class="kpi-icon blue">🚚</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-info">
+              <span class="kpi-label">Delivered Orders</span>
+              <span class="kpi-value" id="kpi-delivered">0</span>
+            </div>
+            <div class="kpi-icon purple">✓</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-info">
+              <span class="kpi-label">Domestic Stock (14.2kg)</span>
+              <span class="kpi-value" id="kpi-domestic-stock">0</span>
+            </div>
+            <div class="kpi-icon green">🔥</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-info">
+              <span class="kpi-label">Commercial Stock (19kg)</span>
+              <span class="kpi-value" id="kpi-commercial-stock">0</span>
+            </div>
+            <div class="kpi-icon orange">🏢</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-info">
+              <span class="kpi-label">Approved Customers</span>
+              <span class="kpi-value" id="kpi-approved-customers">0</span>
+            </div>
+            <div class="kpi-icon green">👥</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-info">
+              <span class="kpi-label">Approved Agents</span>
+              <span class="kpi-value" id="kpi-approved-agents">0</span>
+            </div>
+            <div class="kpi-icon blue">🛵</div>
+          </div>
+        </div>
+
+        <!-- 1. CUSTOMER REGISTRATION REQUESTS (Rule 13, 14, 31) -->
+        <div class="card" id="distributor-customer-requests-card" style="border-left: 4px solid var(--primary); margin-bottom: 2rem;">
+          <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <span style="font-size: 1.35rem;">👤</span>
+                <h3 class="card-title" style="margin: 0;">CUSTOMER REGISTRATION REQUESTS</h3>
+                <span class="badge badge-warning" id="pending-customers-count-badge">0 Pending</span>
+              </div>
+              <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0.35rem 0 0 0;">
+                Customer registration requests for your authorized service area awaiting distributor approval.
+              </p>
+            </div>
+            <a href="distributor-customers.html" class="btn btn-outline btn-sm">All Customers</a>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Customer Name</th>
+                  <th>Mobile</th>
+                  <th>Email</th>
+                  <th>Address</th>
+                  <th>Pincode</th>
+                  <th>Cylinder Type</th>
+                  <th>Registration Date</th>
+                  <th>Status</th>
+                  <th style="text-align: right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="distributor-pending-customers-tbody">
+                <tr>
+                  <td colspan="9" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                    Loading customer registration requests...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 2. DELIVERY AGENT REQUESTS (Rule 8, 31) -->
+        <div class="card" id="distributor-agent-requests-card" style="border-left: 4px solid var(--warning); margin-bottom: 2rem;">
+          <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <span style="font-size: 1.35rem;">🛵</span>
+                <h3 class="card-title" style="margin: 0;">DELIVERY AGENT REQUESTS</h3>
+                <span class="badge badge-warning" id="pending-agents-count-badge">0 Pending</span>
+              </div>
+              <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0.35rem 0 0 0;">
+                Delivery agents who registered to work with your agency depot awaiting approval.
+              </p>
+            </div>
+            <a href="distributor-agents.html" class="btn btn-outline btn-sm">All Agents</a>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Agent Name</th>
+                  <th>Mobile</th>
+                  <th>Email</th>
+                  <th>Address</th>
+                  <th>Registration Date</th>
+                  <th>Status</th>
+                  <th style="text-align: right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="distributor-pending-agents-tbody">
+                <tr>
+                  <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                    Loading delivery agent requests...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 3. Service Area & Inventory Information (Rule 27, 31) -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+          <!-- Service Area Info -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Authorized Service Area</h3>
+            </div>
+            <div style="padding: 0.5rem 0;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem;">
+                <span style="color: var(--text-muted);">Coverage Region:</span>
+                <strong id="dash-sa-name">Shadnagar Service Area</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem;">
+                <span style="color: var(--text-muted);">Covered Pincodes:</span>
+                <span id="dash-sa-pincodes"><span class="badge badge-info">509216</span></span>
+              </div>
+              <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted);">Operational Status:</span>
+                <span class="badge badge-success">Active & Serving</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Inventory Segregation (Rule 27) -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Cylinder Inventory by Type</h3>
+              <a href="distributor-inventory.html" class="btn btn-outline btn-sm">Manage Inventory</a>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; padding: 0.5rem 0;">
+              <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: var(--radius-sm); padding: 0.85rem; text-align: center;">
+                <div style="font-size: 0.78rem; font-weight: 700; color: #15803d; text-transform: uppercase;">Domestic (14.2 kg)</div>
+                <div style="font-size: 1.65rem; font-weight: 800; color: #15803d; margin: 0.25rem 0;" id="dash-inv-domestic">0</div>
+                <div style="font-size: 0.78rem; color: var(--text-muted);">₹950 / refill</div>
+              </div>
+              <div style="background: #ffedd5; border: 1px solid #fdba74; border-radius: var(--radius-sm); padding: 0.85rem; text-align: center;">
+                <div style="font-size: 0.78rem; font-weight: 700; color: #c2410c; text-transform: uppercase;">Commercial (19.0 kg)</div>
+                <div style="font-size: 1.65rem; font-weight: 800; color: #c2410c; margin: 0.25rem 0;" id="dash-inv-commercial">0</div>
+                <div style="font-size: 0.78rem; color: var(--text-muted);">₹1,850 / refill</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Recent Service Area Bookings & Delivery Monitoring (Rule 30, 31) -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Recent Service Area Cylinder Bookings & Delivery Monitoring</h3>
+            <a href="distributor-bookings.html" class="btn btn-outline btn-sm">Manage All Bookings &rarr;</a>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Booking ID</th>
+                  <th>Customer</th>
+                  <th>Delivery Address & PIN</th>
+                  <th>Cylinder & Qty</th>
+                  <th>Payment</th>
+                  <th>Status</th>
+                  <th>Delivery Agent</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="distributor-recent-bookings-tbody">
+                <tr>
+                  <td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                    Loading depot bookings...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- View Customer Details Modal -->
+  <div class="modal" id="view-customer-modal">
+    <div class="modal-overlay" data-close-modal></div>
+    <div class="modal-content" style="max-width: 620px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Customer Registration Details</h3>
+        <button class="modal-close" data-close-modal>&times;</button>
+      </div>
+      <div class="modal-body" id="view-customer-body" style="padding: 1.25rem;"></div>
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+        <button class="btn btn-outline" data-close-modal>Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- View Delivery Agent Details Modal -->
+  <div class="modal" id="view-agent-modal">
+    <div class="modal-overlay" data-close-modal></div>
+    <div class="modal-content" style="max-width: 620px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Delivery Agent Registration Details</h3>
+        <button class="modal-close" data-close-modal>&times;</button>
+      </div>
+      <div class="modal-body" id="view-agent-body" style="padding: 1.25rem;"></div>
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+        <button class="btn btn-outline" data-close-modal>Close</button>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <script type="module">
+    import { requireAuth, logoutUser } from "../js/auth.js";
+    import { initDistributorDashboard } from "../js/distributor.js";
+    import { initNotificationsUI } from "../js/notifications.js";
+    import { initModalListeners } from "../js/utils.js";
+
+    const user = requireAuth(['distributor', 'admin']);
+    if (user) {
+      document.getElementById('sidebar-user-name').textContent = user.name || 'Distributor Depot';
+      document.getElementById('sidebar-user-email').textContent = user.email || '';
+      document.getElementById('sidebar-user-avatar').textContent = (user.name || 'D').charAt(0).toUpperCase();
+
+      initModalListeners();
+      initNotificationsUI();
+      initDistributorDashboard();
+
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+      const toggleBtn = document.getElementById('sidebar-toggle-btn');
+      if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+          sidebar.classList.toggle('open');
+          overlay.classList.toggle('active');
+        });
+      }
+      if (overlay) {
+        overlay.addEventListener('click', () => {
+          sidebar.classList.remove('open');
+          overlay.classList.remove('active');
+        });
+      }
+
+      document.getElementById('logout-btn').addEventListener('click', () => logoutUser());
+    }
+  </script>
+</body>
+</html>

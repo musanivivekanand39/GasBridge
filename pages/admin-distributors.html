@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Authorized Distributors Management - GasBridge Admin Portal.">
+  <title>Manage Distributors - GasBridge</title>
+  
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/dashboard.css">
+  <link rel="stylesheet" href="../css/responsive.css">
+</head>
+<body>
+
+  <div class="dashboard-layout">
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <a href="admin-dashboard.html" class="brand-logo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path>
+          </svg>
+          <div>
+            <span>GasBridge</span>
+            <span class="sidebar-role-badge role-admin">Administrator</span>
+          </div>
+        </a>
+      </div>
+
+      <nav class="sidebar-nav">
+        <span class="nav-category">System Overview</span>
+        <a href="admin-dashboard.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          Dashboard
+        </a>
+        <a href="admin-bookings.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+          All Bookings
+        </a>
+
+        <span class="nav-category">Directory & Routing</span>
+        <a href="admin-customers.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+          Customers
+        </a>
+        <a href="admin-distributors.html" class="sidebar-link active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"></path><path d="M9 8h1"></path><path d="M9 12h1"></path><path d="M9 16h1"></path><path d="M14 8h1"></path><path d="M14 12h1"></path><path d="M14 16h1"></path><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"></path></svg>
+          Distributors
+        </a>
+        <a href="admin-service-areas.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>
+          Service Areas
+        </a>
+        <a href="admin-agents.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          Delivery Agents
+        </a>
+
+        <span class="nav-category">Analytics</span>
+        <a href="admin-inventory.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+          Global Inventory
+        </a>
+        <a href="admin-reports.html" class="sidebar-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+          Audit & Reports
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-mini-profile">
+          <div class="user-avatar" id="sidebar-user-avatar">A</div>
+          <div class="user-info">
+            <span class="user-name" id="sidebar-user-name">Administrator</span>
+            <span class="user-email" id="sidebar-user-email">-</span>
+          </div>
+        </div>
+        <button class="btn-icon" id="logout-btn" title="Sign Out">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+        </button>
+      </div>
+    </aside>
+
+    <div class="dashboard-main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="mobile-toggle" id="sidebar-toggle-btn">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+          </button>
+          <h2 class="page-title">Authorized LPG Distributors</h2>
+        </div>
+
+        <div class="topbar-right">
+          <div class="notification-wrapper"></div>
+        </div>
+      </header>
+
+      <main class="dashboard-content">
+        <!-- Pending Applications Section -->
+        <div class="card" id="pending-distributors-card" style="border-left: 4px solid var(--warning); margin-bottom: 2rem;">
+          <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <span style="font-size: 1.35rem;">⏳</span>
+                <h3 class="card-title" style="margin: 0;">Pending Distributor Registrations</h3>
+                <span class="badge badge-warning" id="pending-count-badge">0 Pending</span>
+              </div>
+              <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0.35rem 0 0 0;">
+                Newly registered agencies requiring administrator acceptance and activation before they can access the portal.
+              </p>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Business Name</th>
+                  <th>Mobile</th>
+                  <th>Email</th>
+                  <th>Address</th>
+                  <th>Pincode</th>
+                  <th>Registration Date</th>
+                  <th>Status</th>
+                  <th style="text-align: right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-pending-distributors-tbody">
+                <tr>
+                  <td colspan="9" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                    Loading pending applications...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Authorized & Active Distributors Card -->
+        <div class="card">
+          <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <h3 class="card-title">Authorized Distribution Agencies & Depots</h3>
+              <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0.25rem 0 0 0;">
+                Active distributors authorized to fulfill cylinder bookings and manage delivery personnel.
+              </p>
+            </div>
+            <span class="badge badge-success" id="active-count-badge">0 Active</span>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Distributor ID</th>
+                  <th>Agency Name</th>
+                  <th>Brand Affiliation</th>
+                  <th>Official Contact</th>
+                  <th>Depot Address</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="admin-distributors-tbody">
+                <tr>
+                  <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                    Loading distributors...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- View Distributor Details Modal (Rule 4) -->
+  <div class="modal" id="view-distributor-modal">
+    <div class="modal-overlay" data-close-modal></div>
+    <div class="modal-content" style="max-width: 620px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Distributor Registration Details</h3>
+        <button class="modal-close" data-close-modal>&times;</button>
+      </div>
+      <div class="modal-body" id="view-distributor-body" style="padding: 1.25rem;">
+        <!-- Filled dynamically -->
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+        <button class="btn btn-outline" data-close-modal>Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { requireAuth, logoutUser } from "../js/auth.js";
+    import { getDistributors, approveDistributor, rejectDistributor } from "../js/firestore.js";
+    import { initNotificationsUI } from "../js/notifications.js";
+    import { escapeHTML, showToast, formatDateTime, initModalListeners } from "../js/utils.js";
+
+    const user = requireAuth(['admin']);
+    if (user) {
+      document.getElementById('sidebar-user-name').textContent = user.name || 'System Admin';
+      document.getElementById('sidebar-user-email').textContent = user.email || '';
+      document.getElementById('sidebar-user-avatar').textContent = (user.name || 'A').charAt(0).toUpperCase();
+
+      initModalListeners();
+      initNotificationsUI();
+
+      async function loadDistributors() {
+        const distributors = await getDistributors();
+        const pendingTbody = document.getElementById('admin-pending-distributors-tbody');
+        const activeTbody = document.getElementById('admin-distributors-tbody');
+        const pendingBadge = document.getElementById('pending-count-badge');
+        const activeBadge = document.getElementById('active-count-badge');
+
+        const pendingList = distributors.filter(d => d.approvalStatus === 'pending' || (!d.active && d.approvalStatus !== 'rejected'));
+        const activeList = distributors.filter(d => d.approvalStatus === 'approved' || (d.active && d.approvalStatus !== 'rejected'));
+
+        if (pendingBadge) pendingBadge.textContent = `${pendingList.length} Pending`;
+        if (activeBadge) activeBadge.textContent = `${activeList.length} Active`;
+
+        // Render Pending Applications (Rule 4)
+        if (pendingList.length === 0) {
+          pendingTbody.innerHTML = `
+            <tr>
+              <td colspan="9" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                <div style="font-size: 1.25rem; margin-bottom: 0.35rem;">✅</div>
+                <div>No pending distributor applications awaiting approval. All agencies are up to date!</div>
+              </td>
+            </tr>
+          `;
+        } else {
+          pendingTbody.innerHTML = pendingList.map(d => {
+            return `
+              <tr>
+                <td><strong>${escapeHTML(d.name || d.contactPerson || 'Distributor')}</strong></td>
+                <td><strong style="color: var(--primary);">${escapeHTML(d.businessName || d.name || 'LPG Agency')}</strong></td>
+                <td>${escapeHTML(d.mobile || '-')}</td>
+                <td>${escapeHTML(d.email || '-')}</td>
+                <td style="font-size: 0.85rem; max-width: 180px;">${escapeHTML(d.address || '-')}</td>
+                <td><span class="badge badge-info">${escapeHTML(d.pincode || '-')}</span></td>
+                <td style="font-size: 0.82rem;">${formatDateTime(d.createdAt)}</td>
+                <td><span class="badge badge-warning">Pending</span></td>
+                <td style="text-align: right; white-space: nowrap;">
+                  <button class="btn btn-sm btn-outline btn-view-dist" data-id="${escapeHTML(d.id)}" style="margin-right: 0.25rem; font-weight: 600;">
+                    View
+                  </button>
+                  <button class="btn btn-sm btn-primary btn-approve-dist" data-id="${escapeHTML(d.id)}" style="margin-right: 0.25rem; font-weight: 600;">
+                    Approve
+                  </button>
+                  <button class="btn btn-sm btn-outline-danger btn-reject-dist" data-id="${escapeHTML(d.id)}" style="font-weight: 600;">
+                    Reject
+                  </button>
+                </td>
+              </tr>
+            `;
+          }).join('');
+
+          // Bind view details listeners
+          pendingTbody.querySelectorAll('.btn-view-dist').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+              const id = e.currentTarget.getAttribute('data-id');
+              const dist = pendingList.find(x => x.id === id);
+              if (dist) {
+                const bodyEl = document.getElementById('view-distributor-body');
+                if (bodyEl) {
+                  bodyEl.innerHTML = `
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                      <div>
+                        <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block;">Applicant Name</span>
+                        <strong style="font-size: 1.05rem;">${escapeHTML(dist.name || dist.contactPerson || '-')}</strong>
+                      </div>
+                      <div>
+                        <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block;">Business / Agency Name</span>
+                        <strong style="font-size: 1.05rem; color: var(--primary);">${escapeHTML(dist.businessName || dist.name || '-')}</strong>
+                      </div>
+                      <div>
+                        <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block;">Mobile Number</span>
+                        <div>${escapeHTML(dist.mobile || '-')}</div>
+                      </div>
+                      <div>
+                        <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block;">Email Address</span>
+                        <div>${escapeHTML(dist.email || '-')}</div>
+                      </div>
+                    </div>
+                    <div style="margin-bottom: 1rem; padding: 0.75rem; background: var(--bg-alt); border-radius: var(--radius-sm);">
+                      <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; display: block;">Depot Address</span>
+                      <div>${escapeHTML(dist.address || '-')}</div>
+                      <div style="margin-top: 0.35rem; font-size: 0.85rem;">Pincode: <strong>${escapeHTML(dist.pincode || '-')}</strong></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted);">
+                      <span>Submitted: ${formatDateTime(dist.createdAt)}</span>
+                      <span>Status: <strong class="badge badge-warning">Pending</strong></span>
+                    </div>
+                  `;
+                }
+                const modal = document.getElementById('view-distributor-modal');
+                if (modal) modal.classList.add('active');
+              }
+            });
+          });
+
+          // Bind approval listeners
+          pendingTbody.querySelectorAll('.btn-approve-dist').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+              const id = e.currentTarget.getAttribute('data-id');
+              try {
+                e.currentTarget.disabled = true;
+                e.currentTarget.textContent = 'Approving...';
+                await approveDistributor(id);
+                showToast("Distributor Approved", "Distributor approved successfully! Notification recorded.", "success");
+                await loadDistributors();
+              } catch (err) {
+                showToast("Approval Failed", err.message || "Could not approve distributor.", "error");
+                e.currentTarget.disabled = false;
+                e.currentTarget.textContent = 'Approve';
+              }
+            });
+          });
+
+          // Bind rejection listeners
+          pendingTbody.querySelectorAll('.btn-reject-dist').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+              const id = e.currentTarget.getAttribute('data-id');
+              const confirmed = confirm("Are you sure you want to reject this distributor application?");
+              if (confirmed) {
+                try {
+                  e.currentTarget.disabled = true;
+                  e.currentTarget.textContent = 'Rejecting...';
+                  await rejectDistributor(id, "Administrative review criteria not met.");
+                  showToast("Distributor Rejected", "Distributor application has been rejected.", "info");
+                  await loadDistributors();
+                } catch (err) {
+                  showToast("Rejection Failed", err.message || "Could not reject application.", "error");
+                  e.currentTarget.disabled = false;
+                  e.currentTarget.textContent = 'Reject';
+                }
+              }
+            });
+          });
+        }
+
+        // Render Active List
+        if (activeList.length === 0) {
+          activeTbody.innerHTML = `
+            <tr>
+              <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                No authorized distributors currently active.
+              </td>
+            </tr>
+          `;
+        } else {
+          activeTbody.innerHTML = activeList.map(d => `
+            <tr>
+              <td><strong style="color: var(--primary);">${escapeHTML(d.id)}</strong></td>
+              <td><strong>${escapeHTML(d.name)}</strong></td>
+              <td><span class="badge badge-secondary">${escapeHTML(d.brand || 'LPG')}</span></td>
+              <td>
+                <div>${escapeHTML(d.email)}</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">${escapeHTML(d.mobile)}</div>
+              </td>
+              <td style="font-size: 0.85rem;">${escapeHTML(d.address)}</td>
+              <td><span class="badge badge-success">Active &amp; Approved</span></td>
+            </tr>
+          `).join('');
+        }
+      }
+
+      loadDistributors();
+
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+      const toggleBtn = document.getElementById('sidebar-toggle-btn');
+      if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+          sidebar.classList.toggle('open');
+          overlay.classList.toggle('active');
+        });
+      }
+      if (overlay) {
+        overlay.addEventListener('click', () => {
+          sidebar.classList.remove('open');
+          overlay.classList.remove('active');
+        });
+      }
+
+      document.getElementById('logout-btn').addEventListener('click', () => logoutUser());
+    }
+  </script>
+</body>
+</html>
