@@ -1,5 +1,7 @@
 # GasBridge - Fueling Better Homes
 
+GasBridge — Online LPG Delivery Management System, a Firebase-powered web app for LPG booking, role-based approval, distributor and delivery-agent management, delivery tracking, and QR-based academic demo payments.
+
 > **Online LPG Delivery Management System**  
 > *Developed as a Software Engineering Capstone Web Application*
 
