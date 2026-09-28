@@ -26,6 +26,33 @@ service cloud.firestore {
         get(/databases/$(database)/documents/deliveryAgents/$(agentId)).data.status == 'approved' &&
         get(/databases/$(database)/documents/deliveryAgents/$(agentId)).data.distributorId == distributorId();
     }
+    function distributorNotificationTarget() {
+      return role() == 'distributor' && (
+        (request.resource.data.role == 'customer' &&
+          exists(/databases/$(database)/documents/customers/$(request.resource.data.recipientUserId)) &&
+          get(/databases/$(database)/documents/customers/$(request.resource.data.recipientUserId)).data.distributorId == distributorId()) ||
+        (request.resource.data.role == 'agent' &&
+          exists(/databases/$(database)/documents/users/$(request.resource.data.recipientUserId)) &&
+          get(/databases/$(database)/documents/users/$(request.resource.data.recipientUserId)).data.role == 'agent' &&
+          get(/databases/$(database)/documents/users/$(request.resource.data.recipientUserId)).data.distributorId == distributorId()) ||
+        (request.resource.data.recipientUserId == 'admin@gasbridge.com' &&
+          request.resource.data.role == 'admin' && request.resource.data.title == 'Distributor Registration Request')
+      );
+    }
+    function customerNotificationTarget() {
+      return role() == 'customer' && request.resource.data.role == 'distributor' &&
+        exists(/databases/$(database)/documents/customers/$(request.auth.uid)) &&
+        exists(/databases/$(database)/documents/users/$(request.resource.data.recipientUserId)) &&
+        get(/databases/$(database)/documents/users/$(request.resource.data.recipientUserId)).data.role == 'distributor' &&
+        get(/databases/$(database)/documents/users/$(request.resource.data.recipientUserId)).data.distributorId ==
+          get(/databases/$(database)/documents/customers/$(request.auth.uid)).data.distributorId;
+    }
+    function agentNotificationTarget() {
+      return role() == 'agent' && request.resource.data.role == 'distributor' &&
+        exists(/databases/$(database)/documents/users/$(request.resource.data.recipientUserId)) &&
+        get(/databases/$(database)/documents/users/$(request.resource.data.recipientUserId)).data.role == 'distributor' &&
+        get(/databases/$(database)/documents/users/$(request.resource.data.recipientUserId)).data.distributorId == distributorId();
+    }
 
     match /users/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || admin());
@@ -150,7 +177,7 @@ service cloud.firestore {
     match /notifications/{id} {
       allow read: if signedIn() && (resource.data.recipientUserId == request.auth.uid || admin());
       allow create: if signedIn() && (admin() || request.resource.data.recipientUserId == request.auth.uid ||
-        (role() == 'distributor' && request.resource.data.recipientRole in ['customer', 'agent']));
+        distributorNotificationTarget() || customerNotificationTarget() || agentNotificationTarget());
       allow update: if signedIn() && resource.data.recipientUserId == request.auth.uid &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
       allow delete: if admin();

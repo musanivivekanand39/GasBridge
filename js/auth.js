@@ -13,6 +13,7 @@ import {
   isDemo, 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
+  sendEmailVerification,
   signOut,
   onAuthStateChanged
 } from "./firebase.js";
@@ -37,6 +38,34 @@ import { ADMIN_CONFIG } from "./firebase-config.js";
 import { showToast, initInactivityTimer } from "./utils.js";
 
 const ACTIVE_USER_KEY = 'gasbridge_active_user';
+
+async function requestEmailVerification(firebaseUser) {
+  if (!firebaseUser || firebaseUser.emailVerified) return false;
+  try {
+    await sendEmailVerification(firebaseUser);
+    return true;
+  } catch (error) {
+    console.warn('Could not send account verification email:', error);
+    return false;
+  }
+}
+
+async function createRegistrationNotification(...args) {
+  try {
+    await createNotification(...args);
+  } catch (error) {
+    // Registration is already saved; a notification failure must not turn it into a failed signup.
+    console.warn('Registration succeeded, but its in-app notification could not be saved:', error);
+  }
+}
+
+async function recordRegistrationAudit(...args) {
+  try {
+    await logAuditEvent(...args);
+  } catch (error) {
+    console.warn('Registration succeeded, but its audit record could not be saved:', error);
+  }
+}
 
 // Get currently authenticated user object from session
 export function getCurrentUser() {
@@ -379,10 +408,12 @@ export async function registerCustomer(formData) {
 
   // 3. Create Firebase Authentication account (Password handled ONLY by Firebase Auth - Rule 47)
   let uid = "cust-" + Date.now();
+  let registrationUser = null;
   if (!isDemo && auth) {
     try {
       const cred = await createUserWithEmailAndPassword(auth, cleanEmail, password);
       uid = cred.user.uid;
+      registrationUser = cred.user;
     } catch (err) {
       if (err.code === 'auth/email-already-in-use') {
         throw new Error("This email is already registered. Please sign in.");
@@ -424,9 +455,10 @@ export async function registerCustomer(formData) {
   };
 
   await saveCustomerProfile(customerProfile);
+  const verificationEmailSent = await requestEmailVerification(registrationUser);
 
   // In-app alert for the assigned distributor (Rule 13)
-  await createNotification(
+  await createRegistrationNotification(
     distributor.userId || distributor.id,
     "distributor",
     "Customer Registration Request",
@@ -434,7 +466,7 @@ export async function registerCustomer(formData) {
     "distributor-customers.html"
   );
 
-  await logAuditEvent(
+  await recordRegistrationAudit(
     uid,
     "customer",
     "CUSTOMER_REGISTERED",
@@ -445,6 +477,7 @@ export async function registerCustomer(formData) {
   return {
     success: true,
     customerProfile,
+    verificationEmailSent,
     message: "Registration submitted successfully. Your customer registration is waiting for distributor approval."
   };
 }
@@ -495,16 +528,57 @@ export async function registerDistributor(formData) {
 
   let uid = "user-dist-" + Date.now().toString().slice(-6);
   const distId = "dist-" + Date.now().toString().slice(-5);
+  let registrationUser = null;
 
   if (!isDemo && auth) {
     try {
       const cred = await createUserWithEmailAndPassword(auth, cleanEmail, password);
       uid = cred.user.uid;
+      registrationUser = cred.user;
     } catch (err) {
       if (err.code === 'auth/email-already-in-use') {
-        throw new Error("This email is already registered. Please sign in.");
+        let existingCredential;
+        try {
+          existingCredential = await signInWithEmailAndPassword(auth, cleanEmail, password);
+        } catch (signInError) {
+          if (['auth/wrong-password', 'auth/invalid-credential', 'auth/invalid-login-credentials'].includes(signInError.code)) {
+            throw new Error('This email already has an account. The password did not match; sign in or reset the account password.');
+          }
+          throw new Error(signInError.message || 'This email already has an account. Sign in to continue.');
+        }
+
+        uid = existingCredential.user.uid;
+        registrationUser = existingCredential.user;
+        if (cleanEmail === ADMIN_CONFIG.email.toLowerCase()) {
+          await signOut(auth);
+          throw new Error('The administrator account cannot be used to register a distributor.');
+        }
+
+        const existingProfile = await getUserProfile(uid);
+        const existingCustomer = await getCustomerProfile(uid);
+        const existingDistributor = (await getDistributors()).find(item =>
+          item.userId === uid || item.email?.toLowerCase() === cleanEmail
+        );
+        if (existingDistributor && existingProfile?.role === 'distributor') {
+          const verificationEmailSent = await requestEmailVerification(existingCredential.user);
+          await signOut(auth);
+          const status = (existingDistributor.status || existingDistributor.approvalStatus || 'pending').toLowerCase();
+          if (status === 'pending') {
+            return {
+              success: true,
+              alreadySubmitted: true,
+              distributorId: existingDistributor.id,
+              verificationEmailSent,
+              message: 'Your distributor application is already awaiting administrator approval.'
+            };
+          }
+        }
+        if (existingProfile || existingCustomer || existingDistributor) {
+          await signOut(auth);
+          throw new Error('This email is already linked to a GasBridge account. Sign in with that account instead.');
+        }
       }
-      throw new Error(err.message || "Unable to register distributor in Firebase Authentication.");
+      if (err.code !== 'auth/email-already-in-use') throw new Error(err.message || "Unable to register distributor in Firebase Authentication.");
     }
   }
   if (isDemo || !auth) throw new Error("Connect Firebase Authentication before creating an account.");
@@ -534,9 +608,10 @@ export async function registerDistributor(formData) {
   };
 
   await saveDistributor(distributorRecord);
+  const verificationEmailSent = await requestEmailVerification(registrationUser);
 
   // In-app alert for Administrator (Rule 4)
-  await createNotification(
+  await createRegistrationNotification(
     "admin@gasbridge.com",
     "admin",
     "Distributor Registration Request",
@@ -544,7 +619,7 @@ export async function registerDistributor(formData) {
     "admin-dashboard.html"
   );
 
-  await logAuditEvent(
+  await recordRegistrationAudit(
     uid,
     "distributor",
     "DISTRIBUTOR_REGISTRATION_SUBMITTED",
@@ -555,6 +630,7 @@ export async function registerDistributor(formData) {
   return {
     success: true,
     distributorId: distId,
+    verificationEmailSent,
     message: "Registration submitted successfully. Your distributor account is waiting for administrator approval."
   };
 }
@@ -610,11 +686,13 @@ export async function registerDeliveryAgent(formData) {
 
   let uid = "user-agent-" + Date.now().toString().slice(-6);
   const agentId = "agent-" + Date.now().toString().slice(-5);
+  let registrationUser = null;
 
   if (!isDemo && auth) {
     try {
       const cred = await createUserWithEmailAndPassword(auth, cleanEmail, password);
       uid = cred.user.uid;
+      registrationUser = cred.user;
     } catch (err) {
       if (err.code === 'auth/email-already-in-use') {
         throw new Error("This email is already registered. Please sign in.");
@@ -647,9 +725,10 @@ export async function registerDeliveryAgent(formData) {
   };
 
   await saveDeliveryAgent(agentRecord);
+  const verificationEmailSent = await requestEmailVerification(registrationUser);
 
   // In-app alert for the associated distributor (Rule 8)
-  await createNotification(
+  await createRegistrationNotification(
     assignedDist ? (assignedDist.userId || assignedDist.id) : assignedDistId,
     "distributor",
     "Delivery Agent Request",
@@ -657,7 +736,7 @@ export async function registerDeliveryAgent(formData) {
     "distributor-agents.html"
   );
 
-  await logAuditEvent(
+  await recordRegistrationAudit(
     uid,
     "agent",
     "AGENT_REGISTRATION_SUBMITTED",
@@ -668,6 +747,7 @@ export async function registerDeliveryAgent(formData) {
   return {
     success: true,
     agentId,
+    verificationEmailSent,
     message: "Registration submitted successfully. Your delivery agent registration is waiting for distributor approval."
   };
 }

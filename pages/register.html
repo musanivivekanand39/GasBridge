@@ -1003,7 +1003,7 @@
 
       try {
         const res = await registerCustomer(formData);
-        showToast("Registration Submitted", "Registration submitted successfully.", "success");
+        showToast(res.alreadySubmitted ? "Application Already Submitted" : "Registration Submitted", res.message || "Registration submitted successfully.", res.alreadySubmitted ? "info" : "success");
 
         customerFlow.style.display = 'none';
         distributorFlow.style.display = 'none';
@@ -1027,6 +1027,7 @@
           <p style="font-size: 0.85rem; color: var(--text-muted);">
             Your local distributor verifies customer addresses to ensure unique household registration and prevent duplicate connections. You will receive an approval confirmation once authorized.
           </p>
+          ${res.verificationEmailSent ? '<p>Please verify your email using the link we just sent before signing in.</p>' : ''}
         `;
         approvalStatusView.style.display = 'block';
 
@@ -1081,7 +1082,7 @@
           pincode
         });
 
-        showToast("Registration Submitted", "Registration submitted successfully.", "success");
+        showToast(res.alreadySubmitted ? "Application Already Submitted" : "Registration Submitted", res.message || "Registration submitted successfully.", res.alreadySubmitted ? "info" : "success");
 
         customerFlow.style.display = 'none';
         distributorFlow.style.display = 'none';
@@ -1104,6 +1105,7 @@
           <p style="font-size: 0.85rem; color: var(--text-muted);">
             The single GasBridge Administrator must review and approve your distributor profile before dashboard access is permitted.
           </p>
+          ${res.verificationEmailSent ? '<p>Please verify your email using the link we just sent before signing in.</p>' : ''}
         `;
         approvalStatusView.style.display = 'block';
 
@@ -1191,6 +1193,7 @@
           <p style="font-size: 0.85rem; color: var(--text-muted);">
             The authorized depot distributor must review and accept your agent application before delivery tasks can be assigned.
           </p>
+          ${res.verificationEmailSent ? '<p>Please verify your email using the link we just sent before signing in.</p>' : ''}
         `;
         approvalStatusView.style.display = 'block';
 
