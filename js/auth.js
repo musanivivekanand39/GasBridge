@@ -13,7 +13,8 @@ import {
   isDemo, 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
-  signOut
+  signOut,
+  onAuthStateChanged
 } from "./firebase.js";
 
 import { 
@@ -74,7 +75,16 @@ export const ROLE_DASHBOARD_MAP = {
  * Route protection: Call on top of any dashboard page.
  * Blocks unauthenticated users, unauthorized roles, and pending/rejected accounts.
  */
-export function requireAuth(allowedRoles = []) {
+export async function requireAuth(allowedRoles = []) {
+  if (!isDemo && auth) {
+    await new Promise(resolve => {
+      let unsubscribe = () => {};
+      unsubscribe = onAuthStateChanged(auth, firebaseUser => {
+        unsubscribe();
+        resolve(firebaseUser);
+      }, () => resolve(null));
+    });
+  }
   const user = getCurrentUser();
 
   if (!user) {

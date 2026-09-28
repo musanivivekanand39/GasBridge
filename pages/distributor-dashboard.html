@@ -374,7 +374,7 @@
     import { initNotificationsUI } from "../js/notifications.js";
     import { initModalListeners } from "../js/utils.js";
 
-    const user = requireAuth(['distributor', 'admin']);
+    const user = await requireAuth(['distributor', 'admin']);
     if (user) {
       document.getElementById('sidebar-user-name').textContent = user.name || 'Distributor Depot';
       document.getElementById('sidebar-user-email').textContent = user.email || '';

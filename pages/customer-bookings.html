@@ -124,7 +124,7 @@
     import { formatCurrency, formatDateTime, getStatusBadgeHTML, escapeHTML } from "../js/utils.js";
     import { initNotificationsUI } from "../js/notifications.js";
 
-    const user = requireAuth(['customer']);
+    const user = await requireAuth(['customer']);
     if (user) {
       document.getElementById('sidebar-user-name').textContent = user.name || 'Customer';
       document.getElementById('sidebar-user-email').textContent = user.email || '';

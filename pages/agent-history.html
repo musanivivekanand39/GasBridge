@@ -111,7 +111,7 @@
     import { initAgentHistoryPage } from "../js/delivery-agent.js";
     import { initNotificationsUI } from "../js/notifications.js";
 
-    const user = requireAuth(['agent', 'admin']);
+    const user = await requireAuth(['agent', 'admin']);
     if (user) {
       document.getElementById('sidebar-user-name').textContent = user.name || 'Delivery Personnel';
       document.getElementById('sidebar-user-email').textContent = user.email || '';

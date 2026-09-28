@@ -179,7 +179,7 @@
     import { initNotificationsUI } from "../js/notifications.js";
     import { initModalListeners, openModal } from "../js/utils.js";
 
-    const user = requireAuth(['admin']);
+    const user = await requireAuth(['admin']);
     if (user) {
       document.getElementById('sidebar-user-name').textContent = user.name || 'System Admin';
       document.getElementById('sidebar-user-email').textContent = user.email || '';
