@@ -183,19 +183,20 @@ export async function loginUser(emailOrMobile, password) {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, targetEmail, password);
       const firebaseUser = userCredential.user;
-      if (!firebaseUser.emailVerified) {
+      const isAdminAccount = firebaseUser.email?.toLowerCase() === ADMIN_CONFIG.email.toLowerCase();
+      if (!firebaseUser.emailVerified && !isAdminAccount) {
         await signOut(auth);
         throw new Error("Verify your email address before signing in.");
       }
 
       const persistedProfile = await getUserProfile(firebaseUser.uid);
-      if (!persistedProfile && firebaseUser.email.toLowerCase() !== ADMIN_CONFIG.email.toLowerCase()) {
+      if (!persistedProfile && !isAdminAccount) {
         await signOut(auth);
         throw new Error("No GasBridge profile is linked to this account. Submit registration first.");
       }
 
       // Single Administrator verification (Rule 2)
-      if (firebaseUser.email.toLowerCase() === ADMIN_CONFIG.email.toLowerCase()) {
+      if (isAdminAccount) {
         const adminSession = {
           uid: firebaseUser.uid,
           email: firebaseUser.email,
