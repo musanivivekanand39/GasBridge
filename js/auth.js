@@ -189,7 +189,7 @@ export async function loginUser(emailOrMobile, password) {
         throw new Error("Verify your email address before signing in.");
       }
 
-      const persistedProfile = await getUserProfile(firebaseUser.uid);
+      const persistedProfile = isAdminAccount ? null : await getUserProfile(firebaseUser.uid);
       if (!persistedProfile && !isAdminAccount) {
         await signOut(auth);
         throw new Error("No GasBridge profile is linked to this account. Submit registration first.");
@@ -206,7 +206,11 @@ export async function loginUser(emailOrMobile, password) {
           approvalStatus: "approved"
         };
         setActiveUser(adminSession);
-        await logAuditEvent(adminSession.uid, "admin", "USER_LOGIN", adminSession.uid, "Admin authenticated via Firebase Auth.");
+        try {
+          await logAuditEvent(adminSession.uid, "admin", "USER_LOGIN", adminSession.uid, "Admin authenticated via Firebase Auth.");
+        } catch (auditError) {
+          console.warn("Admin login succeeded, but the audit log could not be saved:", auditError);
+        }
         return adminSession;
       }
 

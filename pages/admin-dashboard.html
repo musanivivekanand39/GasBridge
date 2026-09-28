@@ -291,7 +291,7 @@
     import { requireAuth, logoutUser } from "../js/auth.js";
     import { initAdminDashboard } from "../js/admin.js";
     import { initNotificationsUI } from "../js/notifications.js";
-    import { initModalListeners } from "../js/utils.js";
+    import { initModalListeners, showToast } from "../js/utils.js";
 
     const user = requireAuth(['admin']);
     if (user) {
@@ -301,7 +301,10 @@
 
       initModalListeners();
       initNotificationsUI();
-      initAdminDashboard();
+      initAdminDashboard().catch((error) => {
+        console.error("Administrator dashboard data failed to load:", error);
+        showToast("Dashboard Data Error", error.message || "Could not load administrator dashboard data.", "error", 7000);
+      });
 
       const sidebar = document.getElementById('sidebar');
       const overlay = document.getElementById('sidebar-overlay');
