@@ -518,8 +518,8 @@ export async function saveDeliveryAgent(agentData) {
   };
   if (!persistLocally() && cleanAgent.status === 'pending' && cleanAgent.distributorId) {
     const distributor = await getDistributorById(cleanAgent.distributorId);
-    if (!distributor || (distributor.userId !== auth.currentUser?.uid && !(await hasAdminAccess()))) {
-      throw new Error('A delivery agent can only register with its assigned distributor.');
+    if (!distributor || (distributor.status !== 'approved' && distributor.approvalStatus !== 'approved' && distributor.active !== true)) {
+      throw new Error('The selected distributor is not available for agent registration. Choose an approved distributor.');
     }
   }
   if (cleanAgent.status !== 'pending') {
@@ -550,7 +550,7 @@ export async function saveDeliveryAgent(agentData) {
     const batch = writeBatch(db);
     batch.set(doc(db, 'deliveryAgents', cleanAgent.id), cleanAgent);
     const userRef = doc(db, 'users', cleanAgent.userId);
-    if (cleanAgent.status === 'pending') batch.set(userRef, linkedUser);
+    if (cleanAgent.status === 'pending') batch.set(userRef, linkedUser, { merge: true });
     else batch.update(userRef, { status: cleanAgent.status, approvalStatus: cleanAgent.status, updatedAt: timestamp });
     await batch.commit();
     return cleanAgent;

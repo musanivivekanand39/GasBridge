@@ -706,6 +706,8 @@ export async function registerDeliveryAgent(formData) {
     throw new Error("Full name, email, mobile, and password are required.");
   }
 
+  if (!/^\d{6}$/.test(cleanPin)) throw new Error('Enter a valid 6-digit operating pincode.');
+
   if (password.length < 8) {
     throw new Error("Password must be at least 8 characters long.");
   }
@@ -716,16 +718,22 @@ export async function registerDeliveryAgent(formData) {
     if (resolution.supported && resolution.distributor) {
       assignedDistId = resolution.distributor.id;
     } else {
-      const allDists = await getDistributors();
-      if (allDists.length > 0) assignedDistId = allDists[0].id;
-      else throw new Error("No authorized distributor found to route this delivery agent registration.");
+      throw new Error("No authorized distributor covers this pincode. Select a distributor that serves your area.");
     }
   }
 
   const assignedDist = await getDistributorById(assignedDistId);
+  if (!assignedDist || (String(assignedDist.status || '').toLowerCase() !== 'approved' &&
+      String(assignedDist.approvalStatus || '').toLowerCase() !== 'approved' && assignedDist.active !== true)) {
+    throw new Error('The selected distributor is not approved for agent registrations. Choose an approved distributor.');
+  }
+  const coveredPins = collectValidPincodes(assignedDist.pincode, assignedDist.pincodes);
+  if (coveredPins.length && !coveredPins.includes(cleanPin)) {
+    throw new Error(`Distributor ${assignedDist.name} does not cover pincode ${cleanPin}. Choose the distributor serving your pincode.`);
+  }
 
   let uid = "user-agent-" + Date.now().toString().slice(-6);
-  const agentId = "agent-" + Date.now().toString().slice(-5);
+  let agentId = "agent-" + Date.now().toString().slice(-5);
   let registrationUser = null;
 
   if (!isDemo && auth) {
@@ -735,9 +743,44 @@ export async function registerDeliveryAgent(formData) {
       registrationUser = cred.user;
     } catch (err) {
       if (err.code === 'auth/email-already-in-use') {
-        throw new Error("This email is already registered. Please sign in.");
+        let existingCredential;
+        try {
+          existingCredential = await signInWithEmailAndPassword(auth, cleanEmail, password);
+        } catch (signInError) {
+          if (['auth/wrong-password', 'auth/invalid-credential', 'auth/invalid-login-credentials'].includes(signInError.code)) {
+            throw new Error('This email already has an account. The password did not match; sign in or reset the account password.');
+          }
+          throw new Error(signInError.message || 'This email already has an account. Sign in to continue.');
+        }
+
+        uid = existingCredential.user.uid;
+        registrationUser = existingCredential.user;
+        if (cleanEmail === ADMIN_CONFIG.email.toLowerCase()) {
+          await signOut(auth);
+          throw new Error('The administrator account cannot be used to register a delivery agent.');
+        }
+
+        const existingProfile = await getUserProfile(uid);
+        if (existingProfile) {
+          if (existingProfile.role !== 'agent' || existingProfile.distributorId !== assignedDistId || existingProfile.status !== 'pending') {
+            await signOut(auth);
+            throw new Error('This email is already linked to a GasBridge account. Sign in with that account instead.');
+          }
+          agentId = existingProfile.agentId || agentId;
+          const existingAgent = await getDeliveryAgentById(agentId);
+          if (existingAgent?.userId === uid) {
+            await signOut(auth);
+            return {
+              success: true,
+              alreadySubmitted: true,
+              agentId,
+              verificationEmailSent: false,
+              message: 'Your delivery agent application is already awaiting distributor approval.'
+            };
+          }
+        }
       }
-      throw new Error(err.message || "Unable to register delivery agent in Firebase Authentication.");
+      if (err.code !== 'auth/email-already-in-use') throw new Error(err.message || "Unable to register delivery agent in Firebase Authentication.");
     }
   }
   if (isDemo || !auth) throw new Error("Connect Firebase Authentication before creating an account.");
@@ -764,7 +807,11 @@ export async function registerDeliveryAgent(formData) {
     updatedAt: new Date().toISOString()
   };
 
-  await saveDeliveryAgent(agentRecord);
+  try {
+    await saveDeliveryAgent(agentRecord);
+  } catch (error) {
+    throw new Error(`Your Firebase Auth account exists, but the delivery agent profile could not be saved: ${error.message}. Retry registration with the same email and password to finish setup.`);
+  }
   const verificationEmailSent = await requestEmailVerification(registrationUser);
 
   // In-app alert for the associated distributor (Rule 8)

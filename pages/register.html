@@ -584,7 +584,11 @@
       const select = document.getElementById('agent-distributor-select');
       if (!select) return;
       const dists = await getDistributors();
-      const active = dists.filter(d => d.status === 'approved' || d.approvalStatus === 'approved' || d.active !== false);
+      const active = dists.filter(d =>
+        String(d.status || '').toLowerCase() === 'approved' ||
+        String(d.approvalStatus || '').toLowerCase() === 'approved' ||
+        d.active === true
+      );
       select.innerHTML = '<option value="">Select Associated Distributor...</option>' + 
         active.map(d => {
           const pincode = d.pincode || (Array.isArray(d.pincodes) ? d.pincodes[0] : String(d.pincodes || '').split(/[,;\s]+/)[0]);
