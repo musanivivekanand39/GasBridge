@@ -539,12 +539,14 @@ async function handlePaymentSuccess() {
   const confirmBtn = modal.querySelector('#btn-confirm-final-payment');
   confirmBtn.disabled = true;
   confirmBtn.textContent = "Processing Demo Payment...";
+  let paymentStep = 'loading booking details';
 
   // Brief latency simulation (700ms)
   await new Promise(r => setTimeout(r, 700));
 
   try {
     const bookingId = currentBooking.bookingId;
+    paymentStep = 'loading booking details';
     const latestBooking = await getBookingById(bookingId);
     if (!latestBooking || latestBooking.paymentStatus === 'paid') {
       throw new Error(latestBooking ? "This booking has already been paid." : "The pending booking could not be found.");
@@ -569,7 +571,8 @@ async function handlePaymentSuccess() {
       transactionReference: currentTransactionRef,
       createdAt: nowIso
     };
-    const existingPayment = await getPaymentByBookingId(bookingId);
+    paymentStep = 'checking for an existing payment';
+    const existingPayment = isDemo ? await getPaymentByBookingId(bookingId) : null;
     if (existingPayment) throw new Error("A payment record already exists for this booking.");
     // Persist booking first; the pending status check above prevents paying it twice.
     const fullBookingPayload = {
@@ -583,6 +586,7 @@ async function handlePaymentSuccess() {
       estimatedDelivery: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0]
     };
 
+    paymentStep = 'saving the payment, confirming the booking, and reserving stock';
     const confirmedBooking = await createBooking(fullBookingPayload);
     if (!confirmedBooking || confirmedBooking.paymentStatus !== 'paid') {
       throw new Error("Payment record was saved but booking confirmation failed. Contact the administrator before retrying.");
@@ -642,6 +646,9 @@ async function handlePaymentSuccess() {
     console.error("Payment Confirmation Error:", err);
     confirmBtn.disabled = false;
     confirmBtn.textContent = "Confirm Payment";
-    showToast("Error", err.message || "Failed to confirm payment.", "error");
+    const detail = err.code === 'permission-denied'
+      ? `Firestore denied access while ${paymentStep}.`
+      : err.message || 'Failed to confirm payment.';
+    showToast("Payment Could Not Complete", detail, "error");
   }
 }
