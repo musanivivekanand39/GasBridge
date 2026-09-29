@@ -456,15 +456,15 @@ export async function openDemoPaymentModal(context) {
       return;
     }
   }
-  // Always encode a public URL. Offline checkout still gets a scannable link,
-  // while the confirmation page will explain when live checkout is required.
-  const localHost = ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname);
-  const confirmationBase = localHost && firebaseConfig.projectId
-    ? `https://${firebaseConfig.projectId}.web.app/pages/customer-booking.html`
-    : window.location.href;
-  const confirmationUrl = new URL('demo-payment-confirm.html', confirmationBase);
-  confirmationUrl.searchParams.set('b', bookingId);
-  confirmationUrl.searchParams.set('t', confirmationToken);
+  // Use an absolute public route so scanners opened from another device or
+  // browser cannot resolve the payment path relative to the current page.
+  const confirmationOrigin = firebaseConfig.projectId
+    ? `https://${firebaseConfig.projectId}.web.app`
+    : window.location.origin;
+  const confirmationUrl = new URL('/pages/demo-payment-confirm.html', confirmationOrigin);
+  confirmationUrl.searchParams.set('bookingId', bookingId);
+  confirmationUrl.searchParams.set('confirmationId', confirmationId || bookingId);
+  confirmationUrl.searchParams.set('token', confirmationToken);
   if (isDemo) confirmationUrl.searchParams.set('offline', '1');
   qrPayload = confirmationUrl.href;
 

@@ -26,6 +26,14 @@
     import { confirmDemoPaymentFromLink } from '../js/firestore.js';
 
     const params = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#\??/, ''));
+    const readParam = (...names) => {
+      for (const name of names) {
+        const value = params.get(name) || hashParams.get(name);
+        if (value) return value.trim();
+      }
+      return '';
+    };
     const status = document.getElementById('confirm-status');
     const title = document.getElementById('confirm-title');
     const icon = document.getElementById('confirm-icon');
@@ -34,9 +42,9 @@
         throw new Error('This payment link needs a live connection. Return to GasBridge, connect to the internet, and start checkout again.');
       }
       await confirmDemoPaymentFromLink({
-        bookingId: params.get('b') || params.get('bookingId'),
-        confirmationId: params.get('b') || params.get('confirmationId'),
-        token: params.get('t') || params.get('token')
+        bookingId: readParam('bookingId', 'booking', 'b'),
+        confirmationId: readParam('confirmationId', 'bookingId', 'booking', 'b'),
+        token: readParam('token', 'confirmationToken', 'paymentToken', 't')
       });
       icon.textContent = '✓';
       title.textContent = 'QR scan received';
