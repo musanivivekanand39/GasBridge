@@ -521,55 +521,71 @@ function setupAgentAssignmentModal(agents, user) {
       if (!targetBookingForAssignment) return;
       const select = modal.querySelector('#agent-select-dropdown');
       const selectedAgentId = select.value;
-      const agent = agents.find(a => a.id === selectedAgentId);
+      const assignButton = modal.querySelector('#confirm-assign-agent-btn');
+      assignButton.disabled = true;
+      try {
+        const currentUser = getCurrentUser();
+        const distributorId = resolveDistributorId(currentUser);
+        const [booking, currentAgents] = await Promise.all([
+          getBookingById(targetBookingForAssignment),
+          getDeliveryAgents(distributorId)
+        ]);
+        const eligibleAgents = currentAgents.filter(a => a.status === 'approved' && a.active !== false);
+        const agent = eligibleAgents.find(a => a.id === selectedAgentId);
 
-      const booking = await getBookingById(targetBookingForAssignment);
-      if (booking) {
-        if (!['confirmed', 'processing'].includes(booking.bookingStatus) || !agent) {
-          showToast("Assignment Unavailable", "Assign an approved agent to a confirmed or processing booking.", "warning");
+        if (!booking) {
+          showToast('Booking Unavailable', 'Could not reload this booking. Refresh the bookings page and try again.', 'error');
           return;
         }
+        if (!['confirmed', 'processing'].includes(booking.bookingStatus)) {
+          showToast('Assignment Unavailable', `This booking is currently “${booking.bookingStatus || 'unknown'}”. Only confirmed or processing bookings can be assigned.`, 'warning');
+          return;
+        }
+        if (!agent) {
+          showToast('Agent Unavailable', 'The selected agent is no longer approved for this depot. Close this window and select an available agent.', 'warning');
+          return;
+        }
+
+        const actor = { id: currentUser.uid, role: 'distributor', distributorId };
         if (booking.bookingStatus === 'confirmed') {
-          try {
-            await updateBookingStatus(booking.bookingId, 'processing', 'Order prepared for delivery.', { id: user.uid, role: 'distributor', distributorId: user.distributorId });
-          } catch (err) {
-            showToast("Status Update Failed", err.message, "error");
-            return;
-          }
+          await updateBookingStatus(booking.bookingId, 'processing', 'Order prepared for delivery.', actor);
         }
-        const effectiveBookingStatus = booking.bookingStatus === 'confirmed' ? 'processing' : booking.bookingStatus;
-        try {
-            await updateBookingRecord(targetBookingForAssignment, {
-              deliveryAgentId: selectedAgentId,
-              bookingStatus: effectiveBookingStatus
-            });
-            if (booking.bookingStatus === 'processing') {
-              await updateBookingStatus(targetBookingForAssignment, 'agent_assigned', `Assigned delivery agent ${agent?.name || ''}.`, {
-                id: user.uid, role: 'distributor', distributorId: user.distributorId
-              });
-            }
-        } catch (err) {
-          showToast("Assignment Failed", err.message, "error");
-          return;
-        }
+        await updateBookingRecord(targetBookingForAssignment, {
+          deliveryAgentId: selectedAgentId,
+          bookingStatus: 'processing'
+        });
+        await updateBookingStatus(targetBookingForAssignment, 'agent_assigned', `Assigned delivery agent ${agent.name || ''}.`, actor);
 
-        // Send notification to the newly assigned agent
-        if (agent) {
+        try {
           await createNotification(
             agent.userId || agent.uid,
-            "agent",
-            "New Delivery Assigned",
-            `Distributor assigned you delivery ${targetBookingForAssignment} in ${booking.deliveryAddress.city}.`,
-            "agent-deliveries.html"
+            'agent',
+            'New Delivery Assigned',
+            `Distributor assigned you delivery ${targetBookingForAssignment} in ${booking.deliveryAddress?.city || 'your service area'}.`,
+            'agent-deliveries.html'
           );
+        } catch (notificationError) {
+          console.warn('Agent was assigned, but the notification could not be sent:', notificationError);
         }
 
-        showToast("Agent Assigned", `Assigned ${agent ? agent.name : 'agent'} to booking ${targetBookingForAssignment}.`, "success");
+        showToast('Agent Assigned', `Assigned ${agent.name || 'the delivery agent'} to booking ${targetBookingForAssignment}.`, 'success');
         closeModal('assign-agent-modal');
-        initDistributorBookingsPage();
+        await initDistributorBookingsPage();
+      } catch (err) {
+        console.error('Delivery agent assignment failed:', err);
+        showToast('Assignment Failed', err.message || 'Could not assign the delivery agent.', 'error');
+      } finally {
+        assignButton.disabled = false;
       }
     });
   }
+
+  // The modal is reused after the booking table refreshes; refresh its choices
+  // too so its click handler never relies on an old list of agents.
+  const agentSelect = modal.querySelector('#agent-select-dropdown');
+  agentSelect.innerHTML = agents.filter(a => a.status === 'approved' && a.active !== false).map(a => `
+    <option value="${escapeHTML(a.id)}">${escapeHTML(a.name)} (${escapeHTML(a.vehicleNumber || 'Van')}) - Status: ${escapeHTML(a.status.toUpperCase())}</option>
+  `).join('');
 }
 
 function openAssignAgentModal(bookingId) {
