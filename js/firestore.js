@@ -1091,13 +1091,15 @@ export async function savePaymentRecord(paymentData) {
 export async function getPaymentByBookingId(bookingId) {
   if (!isDemo && db) {
     try {
-      const direct = await getDoc(doc(db, "payments", bookingId));
-      if (direct.exists()) return direct.data();
-      const q = query(collection(db, "payments"), where("bookingId", "==", bookingId));
+      const currentUid = auth?.currentUser?.uid;
+      if (!currentUid) return null;
+      // Payment document IDs are transaction references, not booking IDs.
+      // Query only the signed-in customer's rows so Firestore rules can prove
+      // the read is authorized; do not probe a missing payments/{bookingId}.
+      const q = query(collection(db, "payments"), where("customerId", "==", currentUid));
       const snap = await getDocs(q);
-      if (!snap.empty) {
-        return snap.docs[0].data();
-      }
+      const match = snap.docs.find(payment => payment.data().bookingId === bookingId);
+      if (match) return match.data();
     } catch (e) {
       console.warn("Firestore error getting payment by booking:", e);
       throw e;
