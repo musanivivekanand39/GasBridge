@@ -215,7 +215,7 @@ service cloud.firestore {
           request.resource.data.transactionReference.matches('GBPAY-[A-Z0-9]{8}') &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['paymentStatus', 'bookingStatus', 'paymentId', 'transactionReference', 'updatedAt', 'estimatedDelivery'])) ||
         (role() == 'distributor' && resource.data.distributorId == distributorId() &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deliveryAgentId', 'deliveryAgentName', 'deliveryAgentMobile', 'deliveryAgentVehicleNumber', 'statusTimeline', 'updatedAt']) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deliveryAgentId', 'deliveryAgentName', 'deliveryAgentMobile', 'deliveryAgentVehicleNumber', 'bookingStatus', 'statusTimeline', 'updatedAt']) &&
           (request.resource.data.deliveryAgentId == resource.data.deliveryAgentId ||
             (resource.data.bookingStatus in ['confirmed', 'processing'] && assignedAgentExists(request.resource.data.deliveryAgentId) && assignedAgentDetailsMatch())) &&
           (request.resource.data.deliveryAgentId == resource.data.deliveryAgentId || request.resource.data.bookingStatus == 'processing') &&
