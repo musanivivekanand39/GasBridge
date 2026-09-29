@@ -409,13 +409,15 @@ export async function openDemoPaymentModal(context) {
       showToast('Could Not Start QR Payment', error.message || 'Check your connection and try again.', 'error');
       return;
     }
-    const confirmationUrl = new URL('demo-payment-confirm.html', window.location.href);
-    if (['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname) && firebaseConfig.projectId) {
-      confirmationUrl.href = `https://${firebaseConfig.projectId}.web.app/pages/demo-payment-confirm.html`;
-    }
-    confirmationUrl.searchParams.set('bookingId', bookingId);
-    confirmationUrl.searchParams.set('confirmationId', confirmationId);
-    confirmationUrl.searchParams.set('token', confirmationToken);
+    // Always encode an absolute public URL: camera apps will not expose a
+    // link for localhost, file://, or a relative URL.
+    const publicOrigin = firebaseConfig.projectId
+      ? `https://${firebaseConfig.projectId}.firebaseapp.com`
+      : window.location.origin;
+    const confirmationUrl = new URL('/pages/demo-payment-confirm.html', publicOrigin);
+    // Keep the encoded URL short and unambiguous for phone camera apps.
+    confirmationUrl.searchParams.set('b', bookingId);
+    confirmationUrl.searchParams.set('t', confirmationToken);
     qrPayload = confirmationUrl.href;
   } else {
     qrPayload = [
@@ -429,8 +431,9 @@ export async function openDemoPaymentModal(context) {
   }
 
   const qrSvg = generateQRCodeSVG(qrPayload, {
-    size: 210,
-    darkColor: "#14532d"
+    size: 280,
+    margin: 4,
+    darkColor: "#000000"
   });
 
   const svgContainer = modal.querySelector('#qr-code-svg-container');

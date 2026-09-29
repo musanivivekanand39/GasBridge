@@ -31,9 +31,9 @@
     const icon = document.getElementById('confirm-icon');
     try {
       await confirmDemoPaymentFromLink({
-        bookingId: params.get('bookingId'),
-        confirmationId: params.get('confirmationId'),
-        token: params.get('token')
+        bookingId: params.get('b') || params.get('bookingId'),
+        confirmationId: params.get('b') || params.get('confirmationId'),
+        token: params.get('t') || params.get('token')
       });
       icon.textContent = '✓';
       title.textContent = 'QR scan received';
