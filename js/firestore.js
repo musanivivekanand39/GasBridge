@@ -1154,7 +1154,9 @@ async function persistApprovalProfile(collectionName, recordId, record, userId) 
   if (collectionName === 'customers') await saveCustomerProfile(record);
   else if (collectionName === 'distributors') await saveDistributor(record);
   else await saveDeliveryAgent(record);
-  if (!persistLocally() && !(await getUserProfile(userId))) throw new Error(`Missing users/${userId} profile; approval cannot be synchronized.`);
+  // The save helpers update the recipient's user profile in the same Firestore
+  // batch as the approval. Distributors cannot read another user's private
+  // users/{uid} document, so do not perform a post-write read as a success check.
   if (persistLocally()) {
     const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
     const user = users.find(item => item.uid === userId);
