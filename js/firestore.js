@@ -774,8 +774,6 @@ export async function createBooking(bookingData) {
       const stock = inventory[typeKey];
       if (!stock || Number(stock.available || 0) < Number(fullBooking.quantity)) throw new Error('Not enough cylinder stock is available.');
       const paymentRef = doc(db, 'payments', fullBooking.transactionReference);
-      const existingPayment = await tx.get(paymentRef);
-      if (existingPayment.exists()) throw new Error('A payment already exists for this booking.');
       tx.update(bookingRef, {
         paymentStatus: 'paid', bookingStatus: 'confirmed', paymentId: fullBooking.paymentId,
         transactionReference: fullBooking.transactionReference, updatedAt: fullBooking.updatedAt,
@@ -791,6 +789,9 @@ export async function createBooking(bookingData) {
         transactionReference: fullBooking.transactionReference,
         createdAt: fullBooking.updatedAt
       });
+      // Do not read the not-yet-created payment document here: payment read
+      // rules intentionally require an existing owner's customerId. A set on
+      // an existing payment still fails because payment updates are denied.
       tx.update(inventoryRef, {
         [`${typeKey}.available`]: Number(stock.available || 0) - Number(fullBooking.quantity),
         [`${typeKey}.reserved`]: Number(stock.reserved || 0) + Number(fullBooking.quantity),
