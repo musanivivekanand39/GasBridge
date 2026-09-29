@@ -332,11 +332,9 @@ export async function saveCustomerProfile(profileData) {
   if (profileData.rejectedBy) cleanProfile.rejectedBy = profileData.rejectedBy;
   if (profileData.rejectionReason) cleanProfile.rejectionReason = profileData.rejectionReason;
 
-  if (!persistLocally() && cleanProfile.status === 'pending') {
-    const caller = await getUserProfile(auth.currentUser?.uid || '');
-    if (caller?.role !== 'customer' || (profileData.userId || profileData.uid) !== auth.currentUser.uid) {
-      throw new Error('Customer registration must use the signed-in customer account.');
-    }
+  if (!persistLocally() && cleanProfile.status === 'pending' &&
+      (!auth.currentUser || (profileData.userId || profileData.uid) !== auth.currentUser.uid)) {
+    throw new Error('Customer registration must use the signed-in customer account.');
   }
 
   const userRec = {
@@ -518,7 +516,8 @@ export async function saveDeliveryAgent(agentData) {
   };
   if (!persistLocally() && cleanAgent.status === 'pending' && cleanAgent.distributorId) {
     const distributor = await getDistributorById(cleanAgent.distributorId);
-    if (!distributor || (distributor.status !== 'approved' && distributor.approvalStatus !== 'approved' && distributor.active !== true)) {
+    if (!distributor || (String(distributor.status || '').toLowerCase() !== 'approved' &&
+        String(distributor.approvalStatus || '').toLowerCase() !== 'approved' && distributor.active !== true)) {
       throw new Error('The selected distributor is not available for agent registration. Choose an approved distributor.');
     }
   }

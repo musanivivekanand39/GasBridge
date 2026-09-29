@@ -187,16 +187,21 @@
       initNotificationsUI();
 
       async function loadAgents() {
-        const distId = user.distributorId || (user.role === 'admin' ? 'dist-01' : '');
-        if (!distId) throw new Error('This account has no assigned distributor depot. Sign in again or contact support.');
-        const pendingAgents = await getPendingDeliveryAgents(distId);
-        const allAgents = await getDeliveryAgents(distId);
-        const activeAgents = allAgents.filter(a => a.approvalStatus === 'approved' || (a.active && a.approvalStatus !== 'rejected'));
-
         const pendingTbody = document.getElementById('distributor-pending-agents-tbody');
         const activeTbody = document.getElementById('distributor-agents-tbody');
         const pendingBadge = document.getElementById('pending-agents-count-badge');
         const activeBadge = document.getElementById('active-agents-count-badge');
+
+        try {
+        const distId = user.distributorId || (user.role === 'admin' ? 'dist-01' : '');
+        if (!distId) throw new Error('This account has no assigned distributor depot. Sign in again or contact support.');
+        const pendingAgents = await getPendingDeliveryAgents(distId);
+        const allAgents = await getDeliveryAgents(distId);
+        const activeAgents = allAgents.filter(a =>
+          String(a.status || '').toLowerCase() === 'approved' ||
+          String(a.approvalStatus || '').toLowerCase() === 'approved' ||
+          (a.active === true && String(a.status || a.approvalStatus || '').toLowerCase() !== 'rejected')
+        );
 
         if (pendingBadge) pendingBadge.textContent = `${pendingAgents.length} Pending`;
         if (activeBadge) activeBadge.textContent = `${activeAgents.length} Active`;
@@ -332,15 +337,22 @@
             <td><strong>${escapeHTML(a.name)}</strong></td>
             <td>${escapeHTML(a.mobile)}</td>
             <td><span class="badge badge-info">${escapeHTML(a.vehicleNumber || 'Van')}</span></td>
-            <td>${a.pincodes.map(p => `<span class="badge badge-secondary" style="margin-right: 3px;">${escapeHTML(p)}</span>`).join('')}</td>
+            <td>${(Array.isArray(a.pincodes) ? a.pincodes : (a.pincode ? [a.pincode] : [])).map(p => `<span class="badge badge-secondary" style="margin-right: 3px;">${escapeHTML(p)}</span>`).join('') || '-'}</td>
             <td>
-              <span class="badge ${a.status === 'available' ? 'badge-success' : (a.status === 'busy' ? 'badge-warning' : 'badge-danger')}">
-                ${a.status.toUpperCase()}
+              <span class="badge ${a.dutyStatus === 'available' ? 'badge-success' : (a.dutyStatus === 'busy' ? 'badge-warning' : 'badge-danger')}">
+                ${escapeHTML(String(a.dutyStatus || 'offline').toUpperCase())}
               </span>
             </td>
             <td><span class="badge badge-success">Active &amp; Authorized</span></td>
           </tr>
         `).join('');
+        } catch (err) {
+          console.error('Could not load delivery agents:', err);
+          const message = escapeHTML(err.message || 'Could not load delivery agent data. Check your connection and Firestore permissions.');
+          if (pendingTbody) pendingTbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--danger);padding:2rem;">${message}</td></tr>`;
+          if (activeTbody) activeTbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--danger);padding:2rem;">${message}</td></tr>`;
+          showToast('Agent Data Unavailable', err.message || 'Could not load delivery agent data.', 'error');
+        }
       }
 
       loadAgents();

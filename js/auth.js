@@ -449,6 +449,7 @@ export async function registerCustomer(formData) {
   // 3. Create Firebase Authentication account (Password handled ONLY by Firebase Auth - Rule 47)
   let uid = "cust-" + Date.now();
   let registrationUser = null;
+  let recoveringExistingAccount = false;
   if (!isDemo && auth) {
     try {
       const cred = await createUserWithEmailAndPassword(auth, cleanEmail, password);
@@ -456,11 +457,65 @@ export async function registerCustomer(formData) {
       registrationUser = cred.user;
     } catch (err) {
       if (err.code === 'auth/email-already-in-use') {
-        throw new Error("This email is already registered. Please sign in.");
+        let existingCredential;
+        try {
+          existingCredential = await signInWithEmailAndPassword(auth, cleanEmail, password);
+        } catch (signInError) {
+          if (['auth/wrong-password', 'auth/invalid-credential', 'auth/invalid-login-credentials'].includes(signInError.code)) {
+            throw new Error('This email already has an account. The password did not match; sign in or reset the account password.');
+          }
+          throw new Error(signInError.message || 'This email already has an account. Sign in to continue.');
+        }
+        uid = existingCredential.user.uid;
+        registrationUser = existingCredential.user;
+
+        if (cleanEmail === ADMIN_CONFIG.email.toLowerCase()) {
+          await signOut(auth);
+          throw new Error('The administrator account cannot be used to register a customer.');
+        }
+
+        const [existingProfile, existingCustomer] = await Promise.all([
+          getUserProfile(uid),
+          getCustomerProfile(uid)
+        ]);
+        if (existingProfile?.role && existingProfile.role !== 'customer') {
+          await signOut(auth);
+          throw new Error('This email is already linked to a different GasBridge account. Sign in with that account instead.');
+        }
+        if (existingCustomer) {
+          if (existingCustomer.distributorId !== distributor.id ||
+              (existingCustomer.status || existingCustomer.approvalStatus) !== 'pending') {
+            await signOut(auth);
+            throw new Error('This email is already linked to a GasBridge customer account. Sign in with that account instead.');
+          }
+          if (!existingProfile) {
+            try {
+              await saveCustomerProfile({ ...existingCustomer, uid, userId: uid, status: 'pending', approvalStatus: 'pending' });
+            } catch (repairError) {
+              await signOut(auth);
+              throw new Error(`Your previous customer record exists, but account setup could not be repaired: ${repairError.message}`);
+            }
+          }
+          const verificationEmailSent = await requestEmailVerification(existingCredential.user);
+          await signOut(auth);
+          return {
+            success: true,
+            alreadySubmitted: true,
+            customerProfile: existingCustomer,
+            verificationEmailSent,
+            message: 'Your customer registration is already awaiting distributor approval.'
+          };
+        }
+        if (existingProfile && (existingProfile.distributorId !== distributor.id || existingProfile.status !== 'pending')) {
+          await signOut(auth);
+          throw new Error('This email is already linked to a GasBridge account. Sign in with that account instead.');
+        }
+        recoveringExistingAccount = true;
       } else if (err.code === 'auth/weak-password') {
         throw new Error("Password must be at least 8 characters long.");
+      } else {
+        throw new Error(err.message || "Unable to create your account in Firebase Authentication.");
       }
-      throw new Error(err.message || "Unable to create your account in Firebase Authentication.");
     }
   }
   if (isDemo || !auth) throw new Error("Connect Firebase Authentication before creating an account.");
@@ -494,7 +549,13 @@ export async function registerCustomer(formData) {
     updatedAt: new Date().toISOString()
   };
 
-  await saveCustomerProfile(customerProfile);
+  try {
+    await saveCustomerProfile(customerProfile);
+  } catch (error) {
+    const recoveryNote = recoveringExistingAccount ? ' This account can be repaired by retrying with the same email and password.' :
+      ' Retry registration with the same email and password to finish setup.';
+    throw new Error(`Your Firebase Auth account exists, but the customer profile could not be saved: ${error.message}.${recoveryNote}`);
+  }
   const verificationEmailSent = await requestEmailVerification(registrationUser);
 
   // In-app alert for the assigned distributor (Rule 13)
