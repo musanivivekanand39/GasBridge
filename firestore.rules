@@ -33,6 +33,15 @@ service cloud.firestore {
         request.resource.data.deliveryAgentMobile == agent.mobile &&
         request.resource.data.deliveryAgentVehicleNumber == agent.vehicleNumber;
     }
+    function validInventorySection(section) {
+      return section is map && section.available is int && section.available >= 0 &&
+        section.reserved is int && section.reserved >= 0;
+    }
+    function validInventoryRecord(id) {
+      return request.resource.data.distributorId == id &&
+        validInventorySection(request.resource.data.domestic) &&
+        validInventorySection(request.resource.data.commercial);
+    }
     function distributorNotificationTarget() {
       return role() == 'distributor' && (
         (request.resource.data.role == 'customer' &&
@@ -153,8 +162,9 @@ service cloud.firestore {
     }
     match /inventory/{id} {
       allow read: if signedIn() && (admin() || (role() == 'distributor' && distributorId() == id) || role() == 'customer');
-      allow create: if admin();
-      allow update: if request.resource.data.distributorId == id && (
+      allow create: if distributorFor(id) && validInventoryRecord(id) &&
+        request.resource.data.keys().hasOnly(['distributorId', 'domestic', 'commercial', 'lowStockThreshold', 'updatedAt']);
+      allow update: if validInventoryRecord(id) && (
         (distributorFor(id) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['domestic', 'commercial', 'lowStockThreshold', 'updatedAt', 'distributorId'])) ||
         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['domestic', 'commercial', 'lastReservation', 'updatedAt']) &&
           validCustomerInventoryReservation(id))

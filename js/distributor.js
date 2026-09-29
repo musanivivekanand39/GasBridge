@@ -10,7 +10,7 @@ import {
   updateBookingRecord, 
   updateBookingStatus, 
   getDistributorInventory, 
-  updateDistributorInventory, 
+  addDistributorStock,
   getDistributorById,
   getServiceAreas,
   getDeliveryAgents,
@@ -646,41 +646,53 @@ export async function initDistributorInventoryPage() {
   if (!user) return;
 
   const distributorId = resolveDistributorId(user);
-  const inventory = await getDistributorInventory(distributorId);
+  const renderInventory = inventory => {
+    document.getElementById('dom-available').textContent = inventory.domestic?.available ?? 0;
+    document.getElementById('dom-reserved').textContent = inventory.domestic?.reserved ?? 0;
+    document.getElementById('com-available').textContent = inventory.commercial?.available ?? 0;
+    document.getElementById('com-reserved').textContent = inventory.commercial?.reserved ?? 0;
+  };
 
-  // Set current stock displays
-  const domAvail = document.getElementById('dom-available');
-  const domRes = document.getElementById('dom-reserved');
-  const comAvail = document.getElementById('com-available');
-  const comRes = document.getElementById('com-reserved');
-
-  if (domAvail) domAvail.textContent = inventory.domestic ? inventory.domestic.available : 0;
-  if (domRes) domRes.textContent = inventory.domestic ? inventory.domestic.reserved : 0;
-  if (comAvail) comAvail.textContent = inventory.commercial ? inventory.commercial.available : 0;
-  if (comRes) comRes.textContent = inventory.commercial ? inventory.commercial.reserved : 0;
+  try {
+    renderInventory(await getDistributorInventory(distributorId));
+  } catch (error) {
+    showToast('Inventory Unavailable', error.message || 'Could not load depot inventory.', 'error');
+    return;
+  }
 
   // Add stock form
   const restockForm = document.getElementById('restock-form');
   if (restockForm) {
+    if (restockForm.dataset.stockHandlerAttached === 'true') return;
+    restockForm.dataset.stockHandlerAttached = 'true';
     restockForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const type = document.getElementById('restock-cylinder-type').value;
-      const addedQty = parseInt(document.getElementById('restock-quantity').value, 10) || 0;
+      const addedQty = Number(document.getElementById('restock-quantity').value);
+      const submitButton = document.getElementById('restock-submit-btn');
 
-      if (addedQty <= 0) {
-        showToast("Invalid Quantity", "Please enter a valid stock quantity to add.", "warning");
+      if (!Number.isInteger(addedQty) || addedQty < 1 || addedQty > 500) {
+        showToast("Invalid Quantity", "Enter a stock quantity from 1 to 500.", "warning");
         return;
       }
 
-      const inv = await getDistributorInventory(distributorId);
-      if (inv[type]) {
-        inv[type].available = (inv[type].available || 0) + addedQty;
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Updating Stock...';
       }
-      await updateDistributorInventory(distributorId, inv);
-
-      showToast("Stock Updated", `Successfully added ${addedQty} units to ${type} inventory.`, "success");
-      restockForm.reset();
-      initDistributorInventoryPage();
+      try {
+        const inventory = await addDistributorStock(distributorId, type, addedQty);
+        renderInventory(inventory);
+        showToast("Stock Updated", `Added ${addedQty} units to ${type} inventory.`, "success");
+        restockForm.reset();
+      } catch (error) {
+        showToast("Stock Update Failed", error.message || 'Could not update inventory.', "error");
+      } finally {
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.innerHTML = '+ Update Inventory Stock';
+        }
+      }
     });
   }
 }

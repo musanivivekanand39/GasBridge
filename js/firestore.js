@@ -632,6 +632,52 @@ export async function updateDistributorInventory(distributorId, inventoryData) {
   return payload;
 }
 
+export async function addDistributorStock(distributorId, cylinderType, quantity) {
+  const typeKey = String(cylinderType || '').toLowerCase();
+  const amount = Number(quantity);
+  if (!['domestic', 'commercial'].includes(typeKey)) throw new Error('Select a valid cylinder type.');
+  if (!Number.isInteger(amount) || amount < 1 || amount > 500) throw new Error('Enter a stock quantity from 1 to 500.');
+
+  if (!persistLocally()) {
+    const inventoryRef = doc(db, 'inventory', distributorId);
+    return runTransaction(db, async tx => {
+      const snap = await tx.get(inventoryRef);
+      const current = snap.exists() ? snap.data() : {
+        distributorId,
+        domestic: { available: 0, reserved: 0 },
+        commercial: { available: 0, reserved: 0 },
+        lowStockThreshold: 15
+      };
+      const domestic = {
+        available: Number(current.domestic?.available || 0),
+        reserved: Number(current.domestic?.reserved || 0)
+      };
+      const commercial = {
+        available: Number(current.commercial?.available || 0),
+        reserved: Number(current.commercial?.reserved || 0)
+      };
+      const stock = typeKey === 'domestic' ? domestic : commercial;
+      stock.available += amount;
+      const payload = {
+        distributorId,
+        domestic,
+        commercial,
+        lowStockThreshold: Number(current.lowStockThreshold ?? 15),
+        updatedAt: new Date().toISOString()
+      };
+      if (snap.exists()) tx.update(inventoryRef, payload);
+      else tx.set(inventoryRef, payload);
+      return payload;
+    });
+  }
+
+  const inventory = await getDistributorInventory(distributorId);
+  const section = inventory[typeKey] || { available: 0, reserved: 0 };
+  section.available = Number(section.available || 0) + amount;
+  inventory[typeKey] = section;
+  return updateDistributorInventory(distributorId, inventory);
+}
+
 export async function checkInventoryAvailable(distributorId, cylinderType, quantity) {
   const inv = await getDistributorInventory(distributorId);
   const typeKey = (cylinderType || 'domestic').toLowerCase();
