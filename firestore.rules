@@ -205,6 +205,10 @@ service cloud.firestore {
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bookingStatus', 'statusTimeline', 'updatedAt']) &&
           request.resource.data.bookingStatus == 'delivered') ||
         (role() == 'customer' && resource.data.customerId == request.auth.uid &&
+          resource.data.paymentStatus == 'unpaid' && resource.data.bookingStatus == 'pending_payment' &&
+          request.resource.data.paymentStatus == 'unpaid' && request.resource.data.bookingStatus == 'cancelled' &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bookingStatus', 'statusTimeline', 'updatedAt'])) ||
+        (role() == 'customer' && resource.data.customerId == request.auth.uid &&
           resource.data.paymentStatus == 'unpaid' && request.resource.data.paymentStatus == 'paid' &&
           request.resource.data.bookingStatus == 'confirmed' && request.resource.data.paymentId.matches('GBPAY-[A-Z0-9]{8}') &&
           request.resource.data.paymentId == request.resource.data.transactionReference &&

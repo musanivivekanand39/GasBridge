@@ -52,7 +52,7 @@ export async function initCustomerDashboard() {
   if (distEl) distEl.textContent = profile.distributorName || "Authorized GasBridge Distributor";
 
   // 4. Load Active/Latest Booking
-  const customerBookings = await getBookings({ customerId: user.uid });
+  const customerBookings = await getBookings({ customerId: user.uid, paymentStatus: 'paid' });
   const activeBooking = customerBookings.find(b => b.bookingStatus !== 'delivered' && b.bookingStatus !== 'cancelled') || customerBookings[0];
 
   const currentOrderCard = document.getElementById('current-order-card');

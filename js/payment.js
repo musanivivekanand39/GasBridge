@@ -11,6 +11,7 @@
 
 import { 
   createBooking, 
+  updateBookingRecord,
   getBookingById, 
   deductInventoryStock,
   createDemoPaymentIntent,
@@ -33,6 +34,7 @@ let stopPaymentConfirmationWatch = null;
 let paymentExpiryTimer = null;
 let paymentCountdownTimer = null;
 let paymentRedirectTimer = null;
+let pendingBookingCancellation = null;
 const PAYMENT_WINDOW_MS = 40_000;
 
 // Generate unique transaction reference: GBPAY-XXXXXXXX
@@ -63,7 +65,29 @@ function stopPaymentWindow() {
   stopPaymentConfirmationWatch = null;
 }
 
-function failExpiredPayment() {
+async function cancelPendingBooking(reason) {
+  if (!currentBooking || currentBooking.paymentStatus !== 'unpaid' || currentBooking.bookingStatus !== 'pending_payment') return;
+  if (pendingBookingCancellation) return pendingBookingCancellation;
+
+  const timeline = [...(currentBooking.statusTimeline || []), {
+    status: 'cancelled',
+    time: new Date().toISOString(),
+    note: reason
+  }];
+  pendingBookingCancellation = updateBookingRecord(currentBooking.bookingId, {
+    bookingStatus: 'cancelled',
+    statusTimeline: timeline
+  }).then(updated => {
+    if (updated) currentBooking = { ...currentBooking, ...updated, statusTimeline: timeline };
+  }).catch(error => {
+    console.warn('Could not cancel the unpaid checkout booking:', error);
+  }).finally(() => {
+    pendingBookingCancellation = null;
+  });
+  return pendingBookingCancellation;
+}
+
+async function failExpiredPayment() {
   stopPaymentWindow();
   const modal = document.getElementById('demo-payment-modal');
   if (modal) {
@@ -75,6 +99,7 @@ function failExpiredPayment() {
     switchView('failure');
   }
   showToast('Payment Failed', 'The 40-second payment window expired.', 'error');
+  await cancelPendingBooking('Payment window expired before confirmation.');
   paymentRedirectTimer = setTimeout(() => {
     closeModalHandler();
     window.location.href = new URL('customer-booking.html', window.location.href).href;
@@ -304,6 +329,7 @@ function ensurePaymentModalExists() {
 
 function closeModalHandler() {
   stopPaymentWindow();
+  void cancelPendingBooking('Checkout was closed before payment confirmation.');
   const modal = document.getElementById('demo-payment-modal');
   if (modal) {
     modal.classList.remove('active');
@@ -506,6 +532,9 @@ async function handlePaymentFailure() {
  * Only completes after "I've Scanned the QR" + "Confirm Demo Payment".
  */
 async function handlePaymentSuccess() {
+  // A scan received before expiry owns the attempt; stop the expiry callback
+  // before the confirmation write can race it.
+  stopPaymentWindow();
   const modal = document.getElementById('demo-payment-modal');
   const confirmBtn = modal.querySelector('#btn-confirm-final-payment');
   confirmBtn.disabled = true;

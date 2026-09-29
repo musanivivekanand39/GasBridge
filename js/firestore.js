@@ -914,6 +914,7 @@ export async function getBookings(filter = {}) {
     if (filter.distributorId && b.distributorId !== filter.distributorId) return false;
     if (filter.deliveryAgentId && b.deliveryAgentId !== filter.deliveryAgentId) return false;
     if (filter.status && b.bookingStatus !== filter.status) return false;
+    if (filter.paymentStatus && b.paymentStatus !== filter.paymentStatus) return false;
     return true;
   }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
