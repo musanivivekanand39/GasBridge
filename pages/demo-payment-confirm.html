@@ -30,6 +30,9 @@
     const title = document.getElementById('confirm-title');
     const icon = document.getElementById('confirm-icon');
     try {
+      if (params.get('offline') === '1') {
+        throw new Error('This payment link needs a live connection. Return to GasBridge, connect to the internet, and start checkout again.');
+      }
       await confirmDemoPaymentFromLink({
         bookingId: params.get('b') || params.get('bookingId'),
         confirmationId: params.get('b') || params.get('confirmationId'),

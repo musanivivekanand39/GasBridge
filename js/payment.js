@@ -412,11 +412,10 @@ export async function openDemoPaymentModal(context) {
 
   let qrPayload;
   let confirmationId = '';
-  let confirmationToken = '';
+  let confirmationToken = generateSecureToken(32);
   const expiresAt = Date.now() + PAYMENT_WINDOW_MS;
   if (!isDemo) {
     confirmationId = bookingId;
-    confirmationToken = generateSecureToken(32);
     try {
       await createDemoPaymentIntent({
         bookingId,
@@ -430,27 +429,18 @@ export async function openDemoPaymentModal(context) {
       showToast('Could Not Start QR Payment', error.message || 'Check your connection and try again.', 'error');
       return;
     }
-    // Always encode an absolute public URL: camera apps will not expose a
-    // link for localhost, file://, or a relative URL.
-    const localHost = ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname);
-    const confirmationBase = localHost && firebaseConfig.projectId
-      ? `https://${firebaseConfig.projectId}.web.app/pages/customer-booking.html`
-      : window.location.href;
-    const confirmationUrl = new URL('demo-payment-confirm.html', confirmationBase);
-    // Keep the encoded URL short and unambiguous for phone camera apps.
-    confirmationUrl.searchParams.set('b', bookingId);
-    confirmationUrl.searchParams.set('t', confirmationToken);
-    qrPayload = confirmationUrl.href;
-  } else {
-    qrPayload = [
-      `GasBridge Test Payment`,
-      `Booking ID: ${bookingId}`,
-      `Amount: ${formatCurrency(context.totalAmount)}`,
-      `Payment: TEST`,
-      `Ref: ${currentTransactionRef}`,
-      `Test payment - No real charge`
-    ].join('\n');
   }
+  // Always encode a public URL. Offline checkout still gets a scannable link,
+  // while the confirmation page will explain when live checkout is required.
+  const localHost = ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname);
+  const confirmationBase = localHost && firebaseConfig.projectId
+    ? `https://${firebaseConfig.projectId}.web.app/pages/customer-booking.html`
+    : window.location.href;
+  const confirmationUrl = new URL('demo-payment-confirm.html', confirmationBase);
+  confirmationUrl.searchParams.set('b', bookingId);
+  confirmationUrl.searchParams.set('t', confirmationToken);
+  if (isDemo) confirmationUrl.searchParams.set('offline', '1');
+  qrPayload = confirmationUrl.href;
 
   const qrSvg = generateQRCodeSVG(qrPayload, {
     size: 280,
@@ -462,8 +452,8 @@ export async function openDemoPaymentModal(context) {
   svgContainer.innerHTML = qrSvg;
   const paymentLink = modal.querySelector('#qr-open-payment-link');
   if (paymentLink) {
-    paymentLink.style.display = isDemo ? 'none' : 'inline-block';
-    if (!isDemo) paymentLink.href = qrPayload;
+    paymentLink.style.display = 'inline-block';
+    paymentLink.href = qrPayload;
   }
 
   modal.querySelector('#btn-scanned-qr').style.display = isDemo ? 'block' : 'none';
