@@ -71,7 +71,7 @@ export async function initDistributorDashboard() {
   }
 
   // 1. Fetch bookings strictly for this distributor
-  const bookings = await getBookings({ distributorId });
+  const bookings = await getBookings({ distributorId, paymentStatus: 'paid' });
 
   // 2. Fetch inventory
   const inventory = await getDistributorInventory(distributorId);
@@ -396,7 +396,7 @@ export async function initDistributorBookingsPage() {
   if (!user) return;
 
   const distributorId = resolveDistributorId(user);
-  const bookings = await getBookings({ distributorId });
+  const bookings = await getBookings({ distributorId, paymentStatus: 'paid' });
   const agents = (await getDeliveryAgents(distributorId)).filter(a => a.status === 'approved' && a.active !== false);
 
   const tbody = document.getElementById('distributor-bookings-full-tbody');
