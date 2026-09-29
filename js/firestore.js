@@ -16,6 +16,7 @@ import {
   writeBatch,
   runTransaction,
   updateDoc, 
+  onSnapshot,
   query, 
   where
 } from "./firebase.js";
@@ -676,6 +677,51 @@ export async function addDistributorStock(distributorId, cylinderType, quantity)
   section.available = Number(section.available || 0) + amount;
   inventory[typeKey] = section;
   return updateDistributorInventory(distributorId, inventory);
+}
+
+export async function createDemoPaymentIntent({ bookingId, customerId, amount, confirmationId, token, expiresAt }) {
+  if (persistLocally()) throw new Error('Scan-to-confirm requires the live Firebase project.');
+  if (!auth?.currentUser || auth.currentUser.uid !== customerId) throw new Error('Sign in as the booking customer before starting payment.');
+  const intentRef = doc(db, 'demoPaymentIntents', bookingId);
+  const previous = await getDoc(intentRef);
+  const intent = {
+    bookingId,
+    customerId,
+    amount: Number(amount),
+    confirmationId,
+    token,
+    expiresAt: new Date(expiresAt)
+  };
+  if (previous.exists()) {
+    await setDoc(intentRef, {
+      confirmationId: intent.confirmationId,
+      token: intent.token,
+      expiresAt: intent.expiresAt
+    }, { merge: true });
+  } else {
+    await setDoc(intentRef, { ...intent, createdAt: new Date() });
+  }
+  return intent;
+}
+
+export async function confirmDemoPaymentFromLink({ bookingId, confirmationId, token }) {
+  if (persistLocally()) throw new Error('This payment link requires the live GasBridge demo project.');
+  if (!bookingId || !confirmationId || !token) throw new Error('This payment link is incomplete. Start payment again from LPG booking.');
+  await setDoc(doc(db, 'demoPaymentConfirmations', bookingId), {
+    bookingId,
+    confirmationId,
+    token,
+    status: 'confirmed'
+  });
+}
+
+export function watchDemoPaymentConfirmation(confirmationId, token, onConfirmed, onError = () => {}) {
+  if (persistLocally()) throw new Error('Scan-to-confirm requires the live Firebase project.');
+  return onSnapshot(doc(db, 'demoPaymentConfirmations', confirmationId), snapshot => {
+    if (!snapshot.exists()) return;
+    const confirmation = snapshot.data();
+    if (confirmation.status === 'confirmed' && confirmation.token === token) onConfirmed(confirmation);
+  }, onError);
 }
 
 export async function checkInventoryAvailable(distributorId, cylinderType, quantity) {

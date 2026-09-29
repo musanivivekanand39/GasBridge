@@ -2,9 +2,9 @@
  * GasBridge - Academic Demo QR Payment Processing Module
  * Fully conforms to requirements:
  * 1. Realistic DEMO payment flow (No real money, no bank credentials, no CVV/cards/UPI PIN).
- * 2. Scannable Dynamic Demo QR Code encoding Booking ID, Amount, Transaction Ref.
- * 3. Two-step confirmation: "I've Scanned the QR" -> "Confirm Demo Payment".
- * 4. Distinct failure simulation option with retry mechanism.
+ * 2. Scannable QR link with one-time cross-device confirmation for the current booking.
+ * 3. Forty-second confirmation window, followed by redirect to LPG booking.
+ * 4. Offline demo mode retains a manual simulated confirmation flow.
  * 5. Payment duplicate protection.
  * 6. Records payment in payments/{paymentId} with paymentMethod: "demo_qr".
  */
@@ -13,6 +13,8 @@ import {
   createBooking, 
   getBookingById, 
   deductInventoryStock,
+  createDemoPaymentIntent,
+  watchDemoPaymentConfirmation,
   logAuditEvent, 
   savePaymentRecord,
   getPaymentByBookingId,
@@ -22,10 +24,15 @@ import {
 import { formatCurrency, formatDateTime, showToast, generateBookingId } from "./utils.js";
 import { generateQRCodeSVG } from "./qrcode.js";
 import { isDemo } from "./firebase.js";
+import { firebaseConfig } from "./firebase-config.js";
 
 let activeOrderContext = null;
 let currentBooking = null;
 let currentTransactionRef = null;
+let stopPaymentConfirmationWatch = null;
+let paymentExpiryTimer = null;
+let paymentCountdownTimer = null;
+const PAYMENT_WINDOW_MS = 40_000;
 
 // Generate unique transaction reference: GBPAY-XXXXXXXX
 function generateTransactionRef() {
@@ -35,6 +42,41 @@ function generateTransactionRef() {
     ref += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return ref;
+}
+
+function generateSecureToken(byteCount = 24) {
+  const bytes = new Uint8Array(byteCount);
+  if (window.crypto?.getRandomValues) window.crypto.getRandomValues(bytes);
+  else for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+  return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function stopPaymentWindow() {
+  if (paymentExpiryTimer) clearTimeout(paymentExpiryTimer);
+  if (paymentCountdownTimer) clearInterval(paymentCountdownTimer);
+  if (stopPaymentConfirmationWatch) stopPaymentConfirmationWatch();
+  paymentExpiryTimer = null;
+  paymentCountdownTimer = null;
+  stopPaymentConfirmationWatch = null;
+}
+
+function startPaymentWindow(expiresAt) {
+  stopPaymentWindow();
+  const countdown = document.getElementById('qr-payment-countdown');
+  const updateCountdown = () => {
+    const remainingMs = Math.max(0, expiresAt - Date.now());
+    const remainingSeconds = Math.ceil(remainingMs / 1000);
+    if (countdown) countdown.textContent = `00:${String(remainingSeconds).padStart(2, '0')}`;
+    if (remainingMs <= 0) {
+      stopPaymentWindow();
+      closeModalHandler();
+      showToast('Payment Link Expired', 'The 40-second payment window ended. Start again from LPG booking.', 'warning');
+      window.location.href = new URL('customer-booking.html', window.location.href).href;
+    }
+  };
+  updateCountdown();
+  paymentCountdownTimer = setInterval(updateCountdown, 250);
+  paymentExpiryTimer = setTimeout(updateCountdown, Math.max(0, expiresAt - Date.now()));
 }
 
 // Ensure Demo Payment Modal exists in DOM
@@ -55,7 +97,7 @@ function ensurePaymentModalExists() {
           </div>
           <div>
             <h3 style="font-size: 1.15rem; margin: 0; color: #ffffff; font-family: 'Outfit', sans-serif;">DEMO PAYMENT</h3>
-            <span style="font-size: 0.76rem; color: #bbf7d0; display: block;">Scan this QR using your phone</span>
+            <span style="font-size: 0.76rem; color: #bbf7d0; display: block;">Scan with Google Lens and open the GasBridge link</span>
           </div>
         </div>
         <button class="btn-icon" id="close-payment-modal-btn" aria-label="Close" style="color: white; background: rgba(255,255,255,0.12); border-radius: 50%;">&times;</button>
@@ -94,8 +136,11 @@ function ensurePaymentModalExists() {
             <div id="qr-code-svg-container" style="display: inline-block; padding: 12px; background: white; border: 2px solid #e2e8f0; border-radius: var(--radius-lg); box-shadow: 0 4px 14px rgba(0,0,0,0.06);">
               <!-- SVG QR inserted dynamically -->
             </div>
-            <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.6rem;">
-              Point your smartphone camera at this code to view demo order details
+            <div id="qr-scan-help" style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.6rem;">
+              Scan with Google Lens, then tap the GasBridge payment link. This demo booking will confirm automatically.
+            </div>
+            <div id="qr-live-waiting" style="display:none; margin-top:0.55rem; font-size:0.9rem; font-weight:700; color:#166534;">
+              Waiting for scan · Link expires in <span id="qr-payment-countdown">00:40</span>
             </div>
           </div>
 
@@ -239,6 +284,7 @@ function ensurePaymentModalExists() {
 }
 
 function closeModalHandler() {
+  stopPaymentWindow();
   const modal = document.getElementById('demo-payment-modal');
   if (modal) {
     modal.classList.remove('active');
@@ -273,6 +319,7 @@ function showConfirmationView() {
  * Adheres to rule 26: Duplicate Protection & Rule 21: Dynamic Scannable QR.
  */
 export async function openDemoPaymentModal(context) {
+  stopPaymentWindow();
   activeOrderContext = context;
   const modal = ensurePaymentModalExists();
 
@@ -342,16 +389,44 @@ export async function openDemoPaymentModal(context) {
   modal.querySelector('#payment-already-paid-alert').style.display = 'none';
   modal.querySelector('#qr-actions-container').style.display = 'flex';
 
-  // Generate dynamic, real scannable QR Code containing booking info
-  // Rule 21: QR must contain GasBridge, Booking ID, Amount, Demo Transaction Reference
-  const qrPayload = [
-    `GasBridge Demo Payment`,
-    `Booking ID: ${bookingId}`,
-    `Amount: ${formatCurrency(context.totalAmount)}`,
-    `Payment: DEMO`,
-    `Ref: ${currentTransactionRef}`,
-    `Academic Demo - No Real Money Transferred`
-  ].join('\n');
+  let qrPayload;
+  let confirmationId = '';
+  let confirmationToken = '';
+  const expiresAt = Date.now() + PAYMENT_WINDOW_MS;
+  if (!isDemo) {
+    confirmationId = bookingId;
+    confirmationToken = generateSecureToken(32);
+    try {
+      await createDemoPaymentIntent({
+        bookingId,
+        customerId: context.customer.uid,
+        amount: context.totalAmount,
+        confirmationId,
+        token: confirmationToken,
+        expiresAt
+      });
+    } catch (error) {
+      showToast('Could Not Start QR Payment', error.message || 'Check your connection and try again.', 'error');
+      return;
+    }
+    const confirmationUrl = new URL('demo-payment-confirm.html', window.location.href);
+    if (['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname) && firebaseConfig.projectId) {
+      confirmationUrl.href = `https://${firebaseConfig.projectId}.web.app/pages/demo-payment-confirm.html`;
+    }
+    confirmationUrl.searchParams.set('bookingId', bookingId);
+    confirmationUrl.searchParams.set('confirmationId', confirmationId);
+    confirmationUrl.searchParams.set('token', confirmationToken);
+    qrPayload = confirmationUrl.href;
+  } else {
+    qrPayload = [
+      `GasBridge Demo Payment`,
+      `Booking ID: ${bookingId}`,
+      `Amount: ${formatCurrency(context.totalAmount)}`,
+      `Payment: DEMO`,
+      `Ref: ${currentTransactionRef}`,
+      `Academic Demo - No Real Money Transferred`
+    ].join('\n');
+  }
 
   const qrSvg = generateQRCodeSVG(qrPayload, {
     size: 210,
@@ -361,9 +436,30 @@ export async function openDemoPaymentModal(context) {
   const svgContainer = modal.querySelector('#qr-code-svg-container');
   svgContainer.innerHTML = qrSvg;
 
+  modal.querySelector('#btn-scanned-qr').style.display = isDemo ? 'block' : 'none';
+  modal.querySelector('#btn-simulate-fail').style.display = isDemo ? 'block' : 'none';
+  modal.querySelector('#qr-live-waiting').style.display = isDemo ? 'none' : 'block';
+  modal.querySelector('#qr-scan-help').textContent = isDemo
+    ? 'Offline demo mode: use “I’ve Scanned the QR” to continue the simulated payment.'
+    : 'Scan with Google Lens, then tap the GasBridge payment link. This demo booking will confirm automatically.';
+
   switchView('qr');
   modal.classList.add('active');
   document.body.style.overflow = 'hidden';
+  startPaymentWindow(expiresAt);
+  if (!isDemo) {
+    stopPaymentConfirmationWatch = watchDemoPaymentConfirmation(
+      confirmationId,
+      confirmationToken,
+      () => {
+        handlePaymentSuccess();
+      },
+      error => {
+        console.error('QR confirmation listener failed:', error);
+        showToast('Waiting for QR Confirmation', error.message || 'Keep this payment window open and try scanning again.', 'warning');
+      }
+    );
+  }
 }
 
 /**
@@ -442,6 +538,8 @@ async function handlePaymentSuccess() {
     if (!confirmedBooking || confirmedBooking.paymentStatus !== 'paid') {
       throw new Error("Payment record was saved but booking confirmation failed. Contact the administrator before retrying.");
     }
+    stopPaymentWindow();
+    currentBooking = confirmedBooking;
 
     if (isDemo) {
       if (confirmedBooking.paymentStatus !== 'paid') throw new Error('Demo payment did not confirm the booking.');

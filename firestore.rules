@@ -93,7 +93,22 @@ service cloud.firestore {
          booking.cylinderType == 'commercial' &&
           resource.data.commercial.available >= booking.quantity &&
           request.resource.data.commercial.available == resource.data.commercial.available - booking.quantity &&
-          request.resource.data.commercial.reserved == resource.data.commercial.reserved + booking.quantity);
+         request.resource.data.commercial.reserved == resource.data.commercial.reserved + booking.quantity);
+    }
+    function validDemoPaymentIntent(bookingId) {
+      let bookingPath = /databases/$(database)/documents/bookings/$(bookingId);
+      return signedIn() && role() == 'customer' && exists(bookingPath) &&
+        get(bookingPath).data.customerId == request.auth.uid &&
+        get(bookingPath).data.paymentStatus == 'unpaid' &&
+        get(bookingPath).data.bookingStatus == 'pending_payment' &&
+        request.resource.data.bookingId == bookingId &&
+        request.resource.data.customerId == request.auth.uid &&
+        request.resource.data.amount == get(bookingPath).data.totalAmount &&
+        request.resource.data.confirmationId == bookingId &&
+        request.resource.data.token is string && request.resource.data.token.size() >= 32 &&
+        request.resource.data.expiresAt is timestamp &&
+        request.resource.data.expiresAt > request.time &&
+        request.resource.data.expiresAt <= request.time + duration.value(45, 's');
     }
 
     match /users/{uid} {
@@ -227,6 +242,40 @@ service cloud.firestore {
         request.resource.data.transactionReference == getAfter(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.transactionReference &&
         !('cardNumber' in request.resource.data) && !('cvv' in request.resource.data) && !('upiPin' in request.resource.data);
       allow update, delete: if false;
+    }
+
+    match /demoPaymentIntents/{bookingId} {
+      allow read: if signedIn() && resource.data.customerId == request.auth.uid;
+      allow create: if validDemoPaymentIntent(bookingId) &&
+        request.resource.data.keys().hasOnly(['bookingId', 'customerId', 'amount', 'confirmationId', 'token', 'expiresAt', 'createdAt']);
+      allow update: if resource.data.customerId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['confirmationId', 'token', 'expiresAt']) &&
+        validDemoPaymentIntent(bookingId);
+      allow delete: if false;
+    }
+
+    match /demoPaymentConfirmations/{bookingId} {
+      function matchingIntent() {
+        let intentPath = /databases/$(database)/documents/demoPaymentIntents/$(bookingId);
+        let bookingPath = /databases/$(database)/documents/bookings/$(bookingId);
+        return exists(intentPath) &&
+          get(intentPath).data.bookingId == bookingId &&
+          get(intentPath).data.confirmationId == bookingId &&
+          get(intentPath).data.token == request.resource.data.token &&
+          request.resource.data.bookingId == bookingId &&
+          request.resource.data.confirmationId == bookingId &&
+          request.time <= get(intentPath).data.expiresAt &&
+          exists(bookingPath) && get(bookingPath).data.paymentStatus == 'unpaid' &&
+          get(bookingPath).data.bookingStatus == 'pending_payment';
+      }
+      allow create: if request.resource.data.keys().hasOnly(['bookingId', 'confirmationId', 'token', 'status']) &&
+        request.resource.data.status == 'confirmed' && matchingIntent();
+      allow update: if request.resource.data.keys().hasOnly(['bookingId', 'confirmationId', 'token', 'status']) &&
+        request.resource.data.status == 'confirmed' && matchingIntent();
+      allow read: if signedIn() &&
+        get(/databases/$(database)/documents/demoPaymentIntents/$(bookingId)).data.customerId == request.auth.uid &&
+        get(/databases/$(database)/documents/demoPaymentIntents/$(bookingId)).data.confirmationId == bookingId;
+      allow delete: if false;
     }
 
     match /notifications/{id} {
