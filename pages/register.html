@@ -586,7 +586,10 @@
       const dists = await getDistributors();
       const active = dists.filter(d => d.status === 'approved' || d.approvalStatus === 'approved' || d.active !== false);
       select.innerHTML = '<option value="">Select Associated Distributor...</option>' + 
-        active.map(d => `<option value="${d.id}">${d.name} (${d.city || 'Depot'} - PIN: ${d.pincode || (d.pincodes ? d.pincodes[0] : '')})</option>`).join('');
+        active.map(d => {
+          const pincode = d.pincode || (Array.isArray(d.pincodes) ? d.pincodes[0] : String(d.pincodes || '').split(/[,;\s]+/)[0]);
+          return `<option value="${d.id}">${d.name} (${d.city || 'Depot'} - PIN: ${pincode || ''})</option>`;
+        }).join('');
     }
     loadDistributorsDropdown();
 

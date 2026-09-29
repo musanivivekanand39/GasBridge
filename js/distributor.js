@@ -11,6 +11,8 @@ import {
   updateBookingStatus, 
   getDistributorInventory, 
   updateDistributorInventory, 
+  getDistributorById,
+  getServiceAreas,
   getDeliveryAgents,
   getPendingDeliveryAgents,
   getPendingDistributorCustomers,
@@ -23,12 +25,50 @@ import {
 } from "./firestore.js";
 import { formatCurrency, formatDateTime, getStatusBadgeHTML, showToast, escapeHTML, openModal, closeModal } from "./utils.js";
 
+function resolveDistributorId(user) {
+  if (user?.distributorId) return user.distributorId;
+  if (user?.role === 'admin') return 'dist-01';
+  throw new Error('Your distributor profile has no assigned depot ID. Sign out and sign in again, or contact support.');
+}
+
+function normalizePincodes(...values) {
+  const raw = values.flatMap(value => Array.isArray(value) ? value : [value])
+    .flatMap(value => String(value ?? '').split(/[,;\s]+/))
+    .map(value => value.trim())
+    .filter(Boolean);
+  return [...new Set(raw.filter(value => /^\d{6}$/.test(value)))];
+}
+
 // Initialize Distributor Dashboard
 export async function initDistributorDashboard() {
   const user = getCurrentUser();
   if (!user) return;
 
-  const distributorId = user.distributorId || 'dist-01';
+  const distributorId = resolveDistributorId(user);
+
+  const [distributor, serviceAreas] = await Promise.all([
+    getDistributorById(distributorId),
+    getServiceAreas()
+  ]);
+  const assignedAreas = serviceAreas.filter(area => area.distributorId === distributorId);
+  const registeredPins = normalizePincodes(distributor?.pincodes);
+  const registeredPrimaryPin = normalizePincodes(distributor?.pincode)[0];
+  const coveredPincodes = registeredPins.length ? registeredPins : registeredPrimaryPin ? [registeredPrimaryPin] : normalizePincodes(...assignedAreas.map(area => area.pincodes));
+
+  const primaryArea = assignedAreas.find(area => area.city?.toLowerCase() === distributor?.city?.toLowerCase()) || assignedAreas[0];
+  const areaCity = distributor?.city || primaryArea?.city || '';
+  const areaNameEl = document.getElementById('dash-sa-name');
+  const areaPincodesEl = document.getElementById('dash-sa-pincodes');
+  const areaStatusEl = document.getElementById('dash-sa-status');
+  if (areaNameEl) areaNameEl.textContent = areaCity ? `${areaCity} Service Area` : primaryArea?.name || distributor?.name || 'Service area not configured';
+  if (areaPincodesEl) areaPincodesEl.innerHTML = coveredPincodes.length
+    ? coveredPincodes.map(pin => `<span class="badge badge-info">${escapeHTML(pin)}</span>`).join(' ')
+    : '<span class="badge badge-warning">No service pincode set</span>';
+  if (areaStatusEl) {
+    const status = (distributor?.status || distributor?.approvalStatus || '').toLowerCase();
+    areaStatusEl.textContent = ['approved', 'active'].includes(status) && distributor?.active !== false ? 'Active & Serving' : status || 'Status unavailable';
+    areaStatusEl.className = `badge ${['approved', 'active'].includes(status) && distributor?.active !== false ? 'badge-success' : 'badge-warning'}`;
+  }
 
   // 1. Fetch bookings strictly for this distributor
   const bookings = await getBookings({ distributorId });
@@ -46,7 +86,7 @@ export async function initDistributorDashboard() {
 
   // Calculate KPIs
   const todayStr = new Date().toISOString().split('T')[0];
-  const todayBookings = bookings.filter(b => b.createdAt.startsWith(todayStr));
+  const todayBookings = bookings.filter(b => String(b.createdAt || '').startsWith(todayStr));
   const pendingAgentAssignment = bookings.filter(b => !b.deliveryAgentId && b.bookingStatus !== 'cancelled' && b.bookingStatus !== 'delivered');
   const processingCount = bookings.filter(b => b.bookingStatus === 'processing' || b.bookingStatus === 'agent_assigned' || b.bookingStatus === 'picked_up');
   const deliveredCount = bookings.filter(b => b.bookingStatus === 'delivered');
@@ -170,7 +210,7 @@ export async function initDistributorDashboard() {
           try {
             e.currentTarget.disabled = true;
             e.currentTarget.textContent = 'Approving...';
-            await approveCustomer(custId, user.uid, "distributor", user.name || "Distributor Depot");
+            await approveCustomer(custId, user.uid, user.name || "Distributor Depot");
             showToast("Customer Approved", "Customer registration approved! Notification recorded.", "success");
             await initDistributorDashboard();
           } catch (err) {
@@ -190,7 +230,7 @@ export async function initDistributorDashboard() {
             try {
               e.currentTarget.disabled = true;
               e.currentTarget.textContent = 'Rejecting...';
-              await rejectCustomer(custId, "Verification criteria not met.", user.uid, "distributor");
+              await rejectCustomer(custId, "Verification criteria not met.", user.uid);
               showToast("Customer Rejected", "Customer registration was rejected.", "info");
               await initDistributorDashboard();
             } catch (err) {
@@ -355,7 +395,7 @@ export async function initDistributorBookingsPage() {
   const user = getCurrentUser();
   if (!user) return;
 
-  const distributorId = user.distributorId || 'dist-01';
+  const distributorId = resolveDistributorId(user);
   const bookings = await getBookings({ distributorId });
   const agents = (await getDeliveryAgents(distributorId)).filter(a => a.status === 'approved' && a.active !== false);
 
@@ -605,7 +645,7 @@ export async function initDistributorInventoryPage() {
   const user = getCurrentUser();
   if (!user) return;
 
-  const distributorId = user.distributorId || 'dist-01';
+  const distributorId = resolveDistributorId(user);
   const inventory = await getDistributorInventory(distributorId);
 
   // Set current stock displays

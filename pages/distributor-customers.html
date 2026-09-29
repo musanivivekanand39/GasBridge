@@ -158,9 +158,8 @@
   </div>
 
   <!-- View Customer Details Modal (Rule 13) -->
-  <div class="modal" id="view-customer-modal">
-    <div class="modal-overlay" data-close-modal></div>
-    <div class="modal-content" style="max-width: 620px;">
+  <div class="modal-backdrop" id="view-customer-modal">
+    <div class="modal-dialog" style="max-width: 620px;">
       <div class="modal-header">
         <h3 class="modal-title">Customer Registration Details</h3>
         <button class="modal-close" data-close-modal>&times;</button>
@@ -180,7 +179,7 @@
     import { initNotificationsUI } from "../js/notifications.js";
     import { escapeHTML, showToast, formatDateTime, initModalListeners } from "../js/utils.js";
 
-    const user = await requireAuth(['distributor', 'admin']);
+    const user = await requireAuth(['distributor']);
     if (user) {
       document.getElementById('sidebar-user-name').textContent = user.name || 'Distributor Depot';
       document.getElementById('sidebar-user-email').textContent = user.email || '';
@@ -190,7 +189,8 @@
       initNotificationsUI();
 
       async function loadCustomers() {
-        const distId = user.distributorId || 'dist-01';
+        const distId = user.distributorId;
+        if (!distId) throw new Error('This account has no assigned distributor depot. Sign in again or contact support.');
         const pendingCusts = await getPendingDistributorCustomers(distId);
         const allCusts = await getDistributorCustomers(distId);
         const activeCusts = allCusts.filter(c => c.approvalStatus === 'approved' || (c.active && c.approvalStatus !== 'rejected'));

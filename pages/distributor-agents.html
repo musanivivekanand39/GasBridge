@@ -156,9 +156,8 @@
   </div>
 
   <!-- View Delivery Agent Details Modal (Rule 8) -->
-  <div class="modal" id="view-agent-modal">
-    <div class="modal-overlay" data-close-modal></div>
-    <div class="modal-content" style="max-width: 620px;">
+  <div class="modal-backdrop" id="view-agent-modal">
+    <div class="modal-dialog" style="max-width: 620px;">
       <div class="modal-header">
         <h3 class="modal-title">Delivery Agent Registration Details</h3>
         <button class="modal-close" data-close-modal>&times;</button>
@@ -188,7 +187,8 @@
       initNotificationsUI();
 
       async function loadAgents() {
-        const distId = user.distributorId || 'dist-01';
+        const distId = user.distributorId || (user.role === 'admin' ? 'dist-01' : '');
+        if (!distId) throw new Error('This account has no assigned distributor depot. Sign in again or contact support.');
         const pendingAgents = await getPendingDeliveryAgents(distId);
         const allAgents = await getDeliveryAgents(distId);
         const activeAgents = allAgents.filter(a => a.approvalStatus === 'approved' || (a.active && a.approvalStatus !== 'rejected'));

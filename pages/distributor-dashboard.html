@@ -268,15 +268,15 @@
             <div style="padding: 0.5rem 0;">
               <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem;">
                 <span style="color: var(--text-muted);">Coverage Region:</span>
-                <strong id="dash-sa-name">Shadnagar Service Area</strong>
+                <strong id="dash-sa-name">Loading service area…</strong>
               </div>
               <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem;">
                 <span style="color: var(--text-muted);">Covered Pincodes:</span>
-                <span id="dash-sa-pincodes"><span class="badge badge-info">509216</span></span>
+                <span id="dash-sa-pincodes">Loading…</span>
               </div>
               <div style="display: flex; justify-content: space-between;">
                 <span style="color: var(--text-muted);">Operational Status:</span>
-                <span class="badge badge-success">Active & Serving</span>
+                <span id="dash-sa-status" class="badge badge-secondary">Loading…</span>
               </div>
             </div>
           </div>
@@ -338,9 +338,8 @@
   </div>
 
   <!-- View Customer Details Modal -->
-  <div class="modal" id="view-customer-modal">
-    <div class="modal-overlay" data-close-modal></div>
-    <div class="modal-content" style="max-width: 620px;">
+  <div class="modal-backdrop" id="view-customer-modal">
+    <div class="modal-dialog" style="max-width: 620px;">
       <div class="modal-header">
         <h3 class="modal-title">Customer Registration Details</h3>
         <button class="modal-close" data-close-modal>&times;</button>
@@ -353,9 +352,8 @@
   </div>
 
   <!-- View Delivery Agent Details Modal -->
-  <div class="modal" id="view-agent-modal">
-    <div class="modal-overlay" data-close-modal></div>
-    <div class="modal-content" style="max-width: 620px;">
+  <div class="modal-backdrop" id="view-agent-modal">
+    <div class="modal-dialog" style="max-width: 620px;">
       <div class="modal-header">
         <h3 class="modal-title">Delivery Agent Registration Details</h3>
         <button class="modal-close" data-close-modal>&times;</button>
@@ -366,7 +364,6 @@
       </div>
     </div>
   </div>
-  </div>
 
   <script type="module">
     import { requireAuth, logoutUser } from "../js/auth.js";
@@ -374,7 +371,7 @@
     import { initNotificationsUI } from "../js/notifications.js";
     import { initModalListeners } from "../js/utils.js";
 
-    const user = await requireAuth(['distributor', 'admin']);
+    const user = await requireAuth(['distributor']);
     if (user) {
       document.getElementById('sidebar-user-name').textContent = user.name || 'Distributor Depot';
       document.getElementById('sidebar-user-email').textContent = user.email || '';

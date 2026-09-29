@@ -47,6 +47,13 @@ const STORAGE_KEYS = {
 
 function persistLocally() { return isDemo || !db; }
 function requireLiveWrite(write) { return isDemo || !db ? Promise.resolve() : write(); }
+function normalizePincodeValues(...values) {
+  const raw = values.flatMap(value => Array.isArray(value) ? value : [value])
+    .flatMap(value => String(value ?? '').split(/[,;\s]+/))
+    .map(value => value.trim())
+    .filter(Boolean);
+  return [...new Set(raw.filter(value => /^\d{6}$/.test(value)))];
+}
 function isCurrentAdmin() {
   return auth?.currentUser?.email?.toLowerCase() === ADMIN_CONFIG.email.toLowerCase();
 }
@@ -144,12 +151,40 @@ export async function seedLiveFirestoreIfEmpty() {
 
 export async function resolveServiceAreaByPincode(pincode) {
   const cleanPin = String(pincode || '').trim();
-  if (!cleanPin || cleanPin.length !== 6) {
+  if (!/^\d{6}$/.test(cleanPin)) {
     return { supported: false, message: "Please enter a valid 6-digit pincode." };
   }
 
   const serviceAreas = await getServiceAreas();
-  const area = serviceAreas.find(sa => sa.active && sa.pincodes.includes(cleanPin));
+  const distributors = await getDistributors();
+  const approvedDistributors = distributors.filter(distributor => {
+    const status = String(distributor.status || distributor.approvalStatus || '').toLowerCase();
+    return ['approved', 'active'].includes(status) || (!status && distributor.active === true);
+  });
+  const registeredCoverage = distributor => {
+    const coverage = normalizePincodeValues(distributor.pincodes);
+    return coverage.length ? coverage : normalizePincodeValues(distributor.pincode);
+  };
+  const matchingDistributors = approvedDistributors.filter(distributor => registeredCoverage(distributor).includes(cleanPin));
+  const mappedArea = serviceAreas.find(area => area.active && normalizePincodeValues(area.pincodes).includes(cleanPin) &&
+    matchingDistributors.some(distributor => distributor.id === area.distributorId));
+
+  if (matchingDistributors.length) {
+    const distributor = mappedArea
+      ? matchingDistributors.find(candidate => candidate.id === mappedArea.distributorId)
+      : matchingDistributors[0];
+    const distributorArea = serviceAreas.find(candidate => candidate.distributorId === distributor.id && candidate.active &&
+      normalizePincodeValues(candidate.pincodes).includes(cleanPin));
+    const area = mappedArea || distributorArea || {
+      id: `sa-${String(distributor.id).replace(/^dist-/, '')}`,
+      name: `${distributor.city || distributor.name || 'Local'} Service Area`,
+      city: distributor.city || '', district: distributor.district || '', state: distributor.state || '',
+      pincodes: [cleanPin], distributorId: distributor.id, active: true
+    };
+    return { supported: true, serviceArea: area, distributor };
+  }
+
+  const area = serviceAreas.find(sa => sa.active && normalizePincodeValues(sa.pincodes).includes(cleanPin));
 
   if (!area) {
     return {
@@ -158,8 +193,7 @@ export async function resolveServiceAreaByPincode(pincode) {
     };
   }
 
-  const distributors = await getDistributors();
-  const distributor = distributors.find(d => d.id === area.distributorId && (d.status === 'approved' || d.approvalStatus === 'approved' || d.active));
+  const distributor = approvedDistributors.find(d => d.id === area.distributorId);
 
   return {
     supported: true,
@@ -369,6 +403,9 @@ export async function saveCustomerProfile(profileData) {
 
 export async function saveDistributor(distData) {
   const timestamp = new Date().toISOString();
+  const normalizedPincodes = normalizePincodeValues(distData.pincodes);
+  const primaryPincode = normalizedPincodes[0] || normalizePincodeValues(distData.pincode)[0] || '';
+  const storedPincodes = normalizedPincodes.length ? normalizedPincodes : primaryPincode ? [primaryPincode] : [];
   const cleanDist = {
     id: distData.id,
     userId: distData.userId || distData.id,
@@ -380,8 +417,8 @@ export async function saveDistributor(distData) {
     city: distData.city || '',
     district: distData.district || '',
     state: distData.state || 'Telangana',
-    pincode: distData.pincode || (distData.pincodes ? distData.pincodes[0] : ''),
-    pincodes: distData.pincodes || (distData.pincode ? [distData.pincode] : []),
+    pincode: primaryPincode,
+    pincodes: storedPincodes,
     serviceAreaId: distData.serviceAreaId || '',
     serviceAreaIds: distData.serviceAreaIds || [],
     status: distData.status || distData.approvalStatus || 'pending',
@@ -531,7 +568,7 @@ export async function saveDeliveryAgent(agentData) {
 
 export async function saveServiceArea(areaData) {
   if (!persistLocally()) {
-    if (!(await hasAdminAccess())) throw new Error('Only an administrator can create service areas.');
+    if (!(await hasAdminAccess())) throw new Error('Only an administrator can maintain service areas.');
     await setDoc(doc(db, "serviceAreas", areaData.id), areaData, { merge: true });
   }
   if (!persistLocally()) return areaData;
@@ -1139,6 +1176,12 @@ export async function approveDistributor(distributorId, approvedBy = "admin") {
   const dists = await getDistributors();
   const dist = dists.find(d => d.id === distributorId);
   if (!dist) throw new Error("Distributor record not found.");
+  const registeredPincodes = normalizePincodeValues(dist.pincodes);
+  const primaryPincode = registeredPincodes[0] || normalizePincodeValues(dist.pincode)[0];
+  const pincodes = registeredPincodes.length ? registeredPincodes : primaryPincode ? [primaryPincode] : [];
+  if (!pincodes.length) throw new Error('Add at least one valid 6-digit service pincode before approving this distributor.');
+  dist.pincode = primaryPincode;
+  dist.pincodes = pincodes;
 
   const nowIso = new Date().toISOString();
   dist.status = "approved";
@@ -1153,23 +1196,37 @@ export async function approveDistributor(distributorId, approvedBy = "admin") {
     ? JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]').find(u => u.distributorId === distributorId)
     : await getUserProfile(dist.userId);
 
-  // Ensure Service Area mapping exists if covered pincodes are present
-  if (dist.pincodes && dist.pincodes.length > 0) {
-    const serviceAreas = await getServiceAreas();
-    const existingArea = serviceAreas.find(sa => sa.distributorId === distributorId);
-    if (!existingArea) {
-      const newArea = {
-        id: "sa-" + dist.id.replace('dist-', ''),
-        name: `${dist.city || dist.name} Service Area`,
-        city: dist.city || "Local City",
-        district: dist.district || "Local District",
-        state: dist.state || "Telangana",
-        pincodes: dist.pincodes,
-        distributorId: dist.id,
-        active: true
-      };
-  await saveServiceArea(newArea);
-    }
+  // Upsert all mappings for this distributor so old or stale pincodes cannot keep routing customers to the wrong depot.
+  const serviceAreas = await getServiceAreas();
+  const existingAreas = serviceAreas.filter(area => area.distributorId === distributorId);
+  const areaIds = existingAreas.length
+    ? existingAreas.map(area => area.id)
+    : [`sa-${dist.id.replace(/^dist-/, '')}`];
+  const fallbackArea = existingAreas[0] || {};
+  const city = dist.city || fallbackArea.city || 'Local City';
+  const areaName = fallbackArea.city?.toLowerCase() === city.toLowerCase() && fallbackArea.name
+    ? fallbackArea.name
+    : `${city} Service Area`;
+  const updatedAreas = areaIds.map(id => {
+    const previous = existingAreas.find(area => area.id === id) || {};
+    return {
+      ...previous, id, name: areaName, city,
+      district: dist.district || previous.district || 'Local District',
+      state: dist.state || previous.state || 'Telangana',
+      pincodes, distributorId: dist.id, active: true, updatedAt: new Date().toISOString()
+    };
+  });
+  await Promise.all(updatedAreas.map(saveServiceArea));
+  dist.serviceAreaId = updatedAreas[0].id;
+  dist.serviceAreaIds = updatedAreas.map(area => area.id);
+  if (!persistLocally()) {
+    await updateDoc(doc(db, 'distributors', distributorId), {
+      pincode: dist.pincode, pincodes: dist.pincodes,
+      serviceAreaId: dist.serviceAreaId, serviceAreaIds: dist.serviceAreaIds,
+      updatedAt: new Date().toISOString()
+    });
+  } else {
+    await saveDistributor(dist);
   }
 
   // Ensure inventory record exists
@@ -1248,12 +1305,12 @@ export async function getPendingDistributors() {
 export async function approveCustomer(customerId, approvedBy = "distributor", distributorName = "Authorized Distributor") {
   const cust = await getCustomerProfile(customerId);
   if (!cust) throw new Error("Customer record not found.");
-  const approver = await getUserProfile(auth?.currentUser?.uid || approvedBy);
-  const adminApproval = await hasAdminAccess();
-  if (!persistLocally() && !adminApproval && (approver?.distributorId !== cust.distributorId || approver?.role !== 'distributor' || auth?.currentUser?.uid !== approvedBy)) {
+  const approverUid = auth?.currentUser?.uid;
+  const approver = await getUserProfile(approverUid || approvedBy);
+  if (!persistLocally() && (approver?.distributorId !== cust.distributorId || approver?.role !== 'distributor' || approverUid !== approvedBy)) {
     throw new Error('Only the assigned distributor can approve this customer.');
   }
-  approvedBy = auth?.currentUser?.uid || approvedBy;
+  approvedBy = approverUid || approvedBy;
 
   const nowIso = new Date().toISOString();
   cust.status = "approved";
@@ -1278,7 +1335,7 @@ export async function approveCustomer(customerId, approvedBy = "distributor", di
 
   await logAuditEvent(
     approvedBy,
-    adminApproval ? "admin" : "distributor",
+    "distributor",
     "CUSTOMER_APPROVED",
     customerId,
     `Distributor (${distributorName}) approved customer connection for ${cust.name} (${cust.email}). Cylinder type: ${cust.cylinderType || 'domestic'}.`
@@ -1293,12 +1350,12 @@ export async function approveCustomer(customerId, approvedBy = "distributor", di
 export async function rejectCustomer(customerId, reason = "Address verification mismatch or unsupported routing.", rejectedBy = "distributor") {
   const cust = await getCustomerProfile(customerId);
   if (!cust) throw new Error("Customer record not found.");
-  const approver = await getUserProfile(auth?.currentUser?.uid || rejectedBy);
-  const adminApproval = await hasAdminAccess();
-  if (!persistLocally() && !adminApproval && (approver?.distributorId !== cust.distributorId || approver?.role !== 'distributor' || auth?.currentUser?.uid !== rejectedBy)) {
+  const approverUid = auth?.currentUser?.uid;
+  const approver = await getUserProfile(approverUid || rejectedBy);
+  if (!persistLocally() && (approver?.distributorId !== cust.distributorId || approver?.role !== 'distributor' || approverUid !== rejectedBy)) {
     throw new Error('Only the assigned distributor can reject this customer.');
   }
-  rejectedBy = auth?.currentUser?.uid || rejectedBy;
+  rejectedBy = approverUid || rejectedBy;
 
   const nowIso = new Date().toISOString();
   cust.status = "rejected";
@@ -1312,7 +1369,7 @@ export async function rejectCustomer(customerId, reason = "Address verification 
 
   await logAuditEvent(
     rejectedBy,
-    adminApproval ? "admin" : "distributor",
+    "distributor",
     "CUSTOMER_REJECTED",
     customerId,
     `Distributor declined customer registration for ${cust.name}. Reason: ${reason}`

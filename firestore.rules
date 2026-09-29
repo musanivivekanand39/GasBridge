@@ -94,7 +94,7 @@ service cloud.firestore {
         request.resource.data.status == 'pending';
       allow update: if cleanProfile() && (
         (signedIn() && request.auth.uid == uid && profileOwnerUnchanged()) ||
-        admin() ||
+        (admin() && resource.data.role != 'customer') ||
         (role() == 'distributor' && resource.data.role in ['customer', 'agent'] &&
           resource.data.distributorId == distributorId() &&
           ((request.resource.data.status == 'approved' && request.resource.data.approvedBy == request.auth.uid) ||
@@ -114,7 +114,7 @@ service cloud.firestore {
           request.resource.data.approvalStatus == resource.data.approvalStatus &&
           request.resource.data.distributorId == resource.data.distributorId &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'mobile', 'email', 'address', 'pincode', 'serviceAreaId', 'serviceAreaName', 'cylinderType', 'updatedAt'])) ||
-        admin() || (role() == 'distributor' && resource.data.distributorId == distributorId() &&
+        (role() == 'distributor' && resource.data.distributorId == distributorId() &&
           ((request.resource.data.status == 'approved' && request.resource.data.approvedBy == request.auth.uid) ||
            (request.resource.data.status == 'rejected' && request.resource.data.rejectedBy == request.auth.uid)) &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'approvalStatus', 'active', 'approvedAt', 'approvedBy', 'rejectedAt', 'rejectedBy', 'rejectionReason', 'updatedAt']))
@@ -127,7 +127,7 @@ service cloud.firestore {
       allow create: if signedIn() && request.resource.data.userId == request.auth.uid && cleanProfile() && request.resource.data.status == 'pending';
       allow update: if admin() || (role() == 'distributor' && resource.data.userId == request.auth.uid &&
         request.resource.data.status == resource.data.status && request.resource.data.approvalStatus == resource.data.approvalStatus &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'businessName', 'contactPerson', 'mobile', 'address', 'city', 'district', 'state', 'pincode', 'pincodes', 'updatedAt']));
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'businessName', 'contactPerson', 'mobile', 'address', 'city', 'district', 'state', 'updatedAt']));
       allow delete: if admin();
     }
 
@@ -149,7 +149,7 @@ service cloud.firestore {
 
     match /serviceAreas/{id} {
       allow read: if true;
-      allow write: if admin() || (signedIn() && role() == 'distributor' && request.resource.data.distributorId == distributorId());
+      allow write: if admin();
     }
     match /inventory/{id} {
       allow read: if signedIn() && (admin() || (role() == 'distributor' && distributorId() == id) || role() == 'customer');

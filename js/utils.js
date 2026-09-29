@@ -157,12 +157,11 @@ export function getGoogleMapsUrl(address) {
 export function initModalListeners() {
   document.addEventListener('click', (e) => {
     const closeBtn = e.target.closest('[data-close-modal]');
-    if (closeBtn) {
-      const modal = closeBtn.closest('.modal-backdrop');
-      if (modal) {
-        modal.classList.remove('active');
-        document.body.style.overflow = '';
-      }
+    const backdrop = e.target.classList?.contains('modal-backdrop') ? e.target : null;
+    const modal = closeBtn?.closest('.modal-backdrop') || backdrop;
+    if (modal) {
+      modal.classList.remove('active');
+      document.body.style.overflow = '';
     }
   });
 }

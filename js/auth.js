@@ -40,6 +40,15 @@ import { showToast, initInactivityTimer } from "./utils.js";
 
 const ACTIVE_USER_KEY = 'gasbridge_active_user';
 
+function collectValidPincodes(...values) {
+  const entries = values.flatMap(value => Array.isArray(value) ? value : [value]);
+  const rawPins = entries.flatMap(value => String(value ?? '').split(/[,;\s]+/)).map(pin => pin.trim()).filter(Boolean);
+  if (rawPins.some(pin => !/^\d{6}$/.test(pin))) {
+    throw new Error('Enter a valid 6-digit service pincode.');
+  }
+  return [...new Set(rawPins)];
+}
+
 async function requestEmailVerification(firebaseUser) {
   if (!firebaseUser || firebaseUser.emailVerified) return false;
   try {
@@ -552,8 +561,8 @@ export async function registerDistributor(formData) {
     throw new Error("Password must be at least 8 characters long.");
   }
 
-  const cleanPin = String(pincode || (Array.isArray(pincodes) ? pincodes[0] : pincodes) || '').trim();
-  const pincodeList = cleanPin ? cleanPin.split(',').map(p => p.trim()).filter(Boolean) : ["509216"];
+  const pincodeList = collectValidPincodes(pincodes, pincode);
+  if (pincodeList.length === 0) throw new Error('Enter at least one 6-digit service pincode.');
 
   const fullAddress = address ? address.trim() : `${premise ? premise.trim() + ', ' : ''}${street ? street.trim() + ', ' : ''}${city ? city.trim() + ', ' : ''}${district ? district.trim() + ', ' : ''}${state ? state.trim() : 'Telangana'} ${pincodeList[0] || ''}`;
 
@@ -627,7 +636,7 @@ export async function registerDistributor(formData) {
     city: (city || "Local City").trim(),
     district: (district || "Local District").trim(),
     state: (state || "Telangana").trim(),
-    pincode: pincodeList[0] || "509216",
+    pincode: pincodeList[0],
     pincodes: pincodeList,
     serviceAreaId: "",
     serviceAreaIds: [],
