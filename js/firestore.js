@@ -683,7 +683,6 @@ export async function createDemoPaymentIntent({ bookingId, customerId, amount, c
   if (persistLocally()) throw new Error('Scan-to-confirm requires the live Firebase project.');
   if (!auth?.currentUser || auth.currentUser.uid !== customerId) throw new Error('Sign in as the booking customer before starting payment.');
   const intentRef = doc(db, 'demoPaymentIntents', bookingId);
-  const previous = await getDoc(intentRef);
   const intent = {
     bookingId,
     customerId,
@@ -692,15 +691,9 @@ export async function createDemoPaymentIntent({ bookingId, customerId, amount, c
     token,
     expiresAt: new Date(expiresAt)
   };
-  if (previous.exists()) {
-    await setDoc(intentRef, {
-      confirmationId: intent.confirmationId,
-      token: intent.token,
-      expiresAt: intent.expiresAt
-    }, { merge: true });
-  } else {
-    await setDoc(intentRef, { ...intent, createdAt: new Date() });
-  }
+  // Merge allows first-time create and retry without attempting a read of a
+  // missing private intent document (which Firestore rules correctly deny).
+  await setDoc(intentRef, intent, { merge: true });
   return intent;
 }
 
