@@ -4,21 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#16783d">
-  <title>Confirm GasBridge Demo Payment</title>
+  <title>Confirm GasBridge Payment</title>
   <link rel="stylesheet" href="../css/style.css">
   <style>
     body { min-height: 100vh; display: grid; place-items: center; padding: 1rem; background: #f1f5f9; }
     .confirm-card { width: min(100%, 470px); padding: 2rem; text-align: center; }
     .confirm-icon { width: 64px; height: 64px; margin: 0 auto 1rem; display: grid; place-items: center; border-radius: 50%; background: #dcfce7; color: #15803d; font-size: 2rem; }
     .confirm-status { margin: 1rem 0 1.5rem; color: #475569; line-height: 1.6; }
-    .demo-label { display: inline-block; margin-bottom: 1rem; padding: .35rem .65rem; border-radius: 99px; background: #fef3c7; color: #92400e; font-size: .8rem; font-weight: 700; }
+    .test-label { display: inline-block; margin-bottom: 1rem; padding: .35rem .65rem; border-radius: 99px; background: #fef3c7; color: #92400e; font-size: .8rem; font-weight: 700; }
   </style>
 </head>
 <body>
   <main class="card confirm-card">
     <div class="confirm-icon" id="confirm-icon">…</div>
-    <span class="demo-label">ACADEMIC DEMO · NO MONEY TRANSFERRED</span>
-    <h1 id="confirm-title">Confirming demo payment</h1>
+    <span class="test-label">TEST PAYMENT · NO REAL CHARGE</span>
+    <h1 id="confirm-title">Confirming payment</h1>
     <p class="confirm-status" id="confirm-status">Please keep this page open while GasBridge confirms your booking.</p>
     <a class="btn btn-primary" href="customer-booking.html">Return to LPG booking</a>
   </main>
@@ -37,7 +37,7 @@
       });
       icon.textContent = '✓';
       title.textContent = 'QR scan received';
-      status.textContent = 'GasBridge received your demo confirmation. The original checkout is now completing your booking.';
+      status.textContent = 'GasBridge received the test confirmation. No money was transferred; return to checkout to view the booking status.';
     } catch (error) {
       icon.textContent = '!';
       icon.style.background = '#fee2e2';

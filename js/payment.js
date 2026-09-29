@@ -32,6 +32,7 @@ let currentTransactionRef = null;
 let stopPaymentConfirmationWatch = null;
 let paymentExpiryTimer = null;
 let paymentCountdownTimer = null;
+let paymentRedirectTimer = null;
 const PAYMENT_WINDOW_MS = 40_000;
 
 // Generate unique transaction reference: GBPAY-XXXXXXXX
@@ -54,10 +55,30 @@ function generateSecureToken(byteCount = 24) {
 function stopPaymentWindow() {
   if (paymentExpiryTimer) clearTimeout(paymentExpiryTimer);
   if (paymentCountdownTimer) clearInterval(paymentCountdownTimer);
+  if (paymentRedirectTimer) clearTimeout(paymentRedirectTimer);
   if (stopPaymentConfirmationWatch) stopPaymentConfirmationWatch();
   paymentExpiryTimer = null;
   paymentCountdownTimer = null;
+  paymentRedirectTimer = null;
   stopPaymentConfirmationWatch = null;
+}
+
+function failExpiredPayment() {
+  stopPaymentWindow();
+  const modal = document.getElementById('demo-payment-modal');
+  if (modal) {
+    modal.querySelector('#payment-failure-message').textContent = 'The payment request expired. No charge was made. Returning to LPG booking…';
+    modal.querySelector('#btn-retry-payment').style.display = 'none';
+    modal.querySelector('#btn-dismiss-failure').style.display = 'none';
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    switchView('failure');
+  }
+  showToast('Payment Failed', 'The 40-second payment window expired.', 'error');
+  paymentRedirectTimer = setTimeout(() => {
+    closeModalHandler();
+    window.location.href = new URL('customer-booking.html', window.location.href).href;
+  }, 2200);
 }
 
 function startPaymentWindow(expiresAt) {
@@ -68,10 +89,7 @@ function startPaymentWindow(expiresAt) {
     const remainingSeconds = Math.ceil(remainingMs / 1000);
     if (countdown) countdown.textContent = `00:${String(remainingSeconds).padStart(2, '0')}`;
     if (remainingMs <= 0) {
-      stopPaymentWindow();
-      closeModalHandler();
-      showToast('Payment Link Expired', 'The 40-second payment window ended. Start again from LPG booking.', 'warning');
-      window.location.href = new URL('customer-booking.html', window.location.href).href;
+      failExpiredPayment();
     }
   };
   updateCountdown();
@@ -96,17 +114,17 @@ function ensurePaymentModalExists() {
             📱
           </div>
           <div>
-            <h3 style="font-size: 1.15rem; margin: 0; color: #ffffff; font-family: 'Outfit', sans-serif;">DEMO PAYMENT</h3>
-            <span style="font-size: 0.76rem; color: #bbf7d0; display: block;">Scan with Google Lens and open the GasBridge link</span>
+            <h3 style="font-size: 1.15rem; margin: 0; color: #ffffff; font-family: 'Outfit', sans-serif;">SECURE CHECKOUT</h3>
+            <span style="font-size: 0.76rem; color: #bbf7d0; display: block;">Scan with Google Lens and open the GasBridge payment link</span>
           </div>
         </div>
         <button class="btn-icon" id="close-payment-modal-btn" aria-label="Close" style="color: white; background: rgba(255,255,255,0.12); border-radius: 50%;">&times;</button>
       </div>
 
-      <!-- Academic Disclaimer Banner -->
+      <!-- Test payment disclosure -->
       <div style="background: #fffbeb; border-bottom: 1px solid #fef3c7; color: #92400e; padding: 0.6rem 1.25rem; font-size: 0.78rem; text-align: center; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
         <span>🎓</span>
-        <span>Academic Demo – No Real Money Is Transferred</span>
+        <span>Test payment · No real charge will be made</span>
       </div>
 
       <div class="modal-body" style="padding: 1.5rem;">
@@ -126,7 +144,7 @@ function ensurePaymentModalExists() {
               <strong id="qr-pay-amount" style="font-size: 1.25rem; color: var(--text-main); font-family: 'Outfit', sans-serif;">₹0</strong>
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; color: var(--text-muted); border-top: 1px dashed var(--border); padding-top: 0.35rem; margin-top: 0.35rem;">
-              <span>Demo Transaction Ref:</span>
+              <span>Transaction Ref:</span>
               <code id="qr-tx-ref" style="background: #e2e8f0; padding: 0.15rem 0.4rem; border-radius: 4px; font-weight: 700; color: #334155;">-</code>
             </div>
           </div>
@@ -137,8 +155,9 @@ function ensurePaymentModalExists() {
               <!-- SVG QR inserted dynamically -->
             </div>
             <div id="qr-scan-help" style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.6rem;">
-              Scan with Google Lens, then tap the GasBridge payment link. This demo booking will confirm automatically.
+              Scan with Google Lens, then tap the GasBridge payment link to continue.
             </div>
+            <a id="qr-open-payment-link" href="#" target="_blank" rel="noopener noreferrer" style="display:none; margin-top:0.45rem; font-size:0.85rem; font-weight:700;">Open payment link</a>
             <div id="qr-live-waiting" style="display:none; margin-top:0.55rem; font-size:0.9rem; font-weight:700; color:#166534;">
               Waiting for scan · Link expires in <span id="qr-payment-countdown">00:40</span>
             </div>
@@ -171,9 +190,9 @@ function ensurePaymentModalExists() {
           <div style="width: 56px; height: 56px; border-radius: 50%; background: #dcfce7; color: #15803d; font-size: 1.75rem; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
             ✓
           </div>
-          <h3 style="font-family: 'Outfit', sans-serif; font-size: 1.35rem; margin-bottom: 0.4rem; color: var(--text-main);">Confirm Demo Payment</h3>
+          <h3 style="font-family: 'Outfit', sans-serif; font-size: 1.35rem; margin-bottom: 0.4rem; color: var(--text-main);">Confirm Payment</h3>
           <p style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.5; max-width: 380px; margin: 0 auto 1.25rem;">
-            Confirm that you have scanned the QR code on your phone. In this academic demo, clicking Confirm Payment will finalize your cylinder booking.
+            Confirm the test checkout to complete this booking. No money will be charged.
           </p>
 
           <div style="background: #f1f5f9; border-radius: var(--radius-md); padding: 0.85rem; margin-bottom: 1.5rem; text-align: left; font-size: 0.85rem;">
@@ -182,8 +201,8 @@ function ensurePaymentModalExists() {
               <strong id="confirm-pay-amount" style="color: var(--primary); font-size: 1.1rem;">₹0</strong>
             </div>
             <div style="display: flex; justify-content: space-between;">
-              <span style="color: var(--text-muted);">Simulation Mode:</span>
-              <span class="badge badge-warning" style="font-size: 0.72rem;">Academic Demo - No Real Money</span>
+              <span style="color: var(--text-muted);">Payment mode:</span>
+              <span class="badge badge-warning" style="font-size: 0.72rem;">Test · no charge</span>
             </div>
           </div>
 
@@ -203,8 +222,8 @@ function ensurePaymentModalExists() {
             ✕
           </div>
           <h3 style="font-family: 'Outfit', sans-serif; font-size: 1.35rem; margin-bottom: 0.4rem; color: #dc2626;">Payment Status: Failed</h3>
-          <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.5; margin-bottom: 1.5rem;">
-            Demo payment failed.
+          <p id="payment-failure-message" style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.5; margin-bottom: 1.5rem;">
+            Payment failed. No charge was made.
           </p>
           <div style="display: flex; gap: 0.75rem; justify-content: center;">
             <button type="button" class="btn btn-primary" id="btn-retry-payment" style="padding: 0.75rem 1.75rem;">
@@ -221,9 +240,9 @@ function ensurePaymentModalExists() {
           <div style="width: 60px; height: 60px; border-radius: 50%; background: #dcfce7; color: #15803d; font-size: 2rem; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem;">
             ✓
           </div>
-          <h3 style="font-family: 'Outfit', sans-serif; font-size: 1.45rem; color: #15803d; margin-bottom: 0.25rem;">✓ Payment Successful</h3>
+          <h3 style="font-family: 'Outfit', sans-serif; font-size: 1.45rem; color: #15803d; margin-bottom: 0.25rem;">✓ Test Payment Confirmed</h3>
           <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.25rem;">
-            Your cylinder refill order has been confirmed.
+            Your cylinder refill order has been confirmed. No money was charged.
           </p>
 
           <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem 1.25rem; margin-bottom: 1.5rem; text-align: left; font-size: 0.86rem; line-height: 1.6;">
@@ -241,11 +260,11 @@ function ensurePaymentModalExists() {
             </div>
             <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; margin-bottom: 0.4rem;">
               <span style="color: var(--text-muted);">Payment Method:</span>
-              <span style="font-weight: 600;">Demo QR</span>
+              <span style="font-weight: 600;">QR test checkout</span>
             </div>
             <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; margin-bottom: 0.4rem;">
               <span style="color: var(--text-muted);">Payment Status:</span>
-              <span class="badge badge-success" style="font-size: 0.72rem;">Paid</span>
+              <span class="badge badge-success" style="font-size: 0.72rem;">Test confirmed</span>
             </div>
             <div style="display: flex; justify-content: space-between;">
               <span style="color: var(--text-muted);">Date / Time:</span>
@@ -322,6 +341,8 @@ export async function openDemoPaymentModal(context) {
   stopPaymentWindow();
   activeOrderContext = context;
   const modal = ensurePaymentModalExists();
+  modal.querySelector('#btn-retry-payment').style.display = '';
+  modal.querySelector('#btn-dismiss-failure').style.display = '';
 
   // Create initial booking in database or check existing
   let bookingId = context.bookingId || generateBookingId();
@@ -411,22 +432,23 @@ export async function openDemoPaymentModal(context) {
     }
     // Always encode an absolute public URL: camera apps will not expose a
     // link for localhost, file://, or a relative URL.
-    const publicOrigin = firebaseConfig.projectId
-      ? `https://${firebaseConfig.projectId}.firebaseapp.com`
-      : window.location.origin;
-    const confirmationUrl = new URL('/pages/demo-payment-confirm.html', publicOrigin);
+    const localHost = ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname);
+    const confirmationBase = localHost && firebaseConfig.projectId
+      ? `https://${firebaseConfig.projectId}.web.app/pages/customer-booking.html`
+      : window.location.href;
+    const confirmationUrl = new URL('demo-payment-confirm.html', confirmationBase);
     // Keep the encoded URL short and unambiguous for phone camera apps.
     confirmationUrl.searchParams.set('b', bookingId);
     confirmationUrl.searchParams.set('t', confirmationToken);
     qrPayload = confirmationUrl.href;
   } else {
     qrPayload = [
-      `GasBridge Demo Payment`,
+      `GasBridge Test Payment`,
       `Booking ID: ${bookingId}`,
       `Amount: ${formatCurrency(context.totalAmount)}`,
-      `Payment: DEMO`,
+      `Payment: TEST`,
       `Ref: ${currentTransactionRef}`,
-      `Academic Demo - No Real Money Transferred`
+      `Test payment - No real charge`
     ].join('\n');
   }
 
@@ -438,13 +460,18 @@ export async function openDemoPaymentModal(context) {
 
   const svgContainer = modal.querySelector('#qr-code-svg-container');
   svgContainer.innerHTML = qrSvg;
+  const paymentLink = modal.querySelector('#qr-open-payment-link');
+  if (paymentLink) {
+    paymentLink.style.display = isDemo ? 'none' : 'inline-block';
+    if (!isDemo) paymentLink.href = qrPayload;
+  }
 
   modal.querySelector('#btn-scanned-qr').style.display = isDemo ? 'block' : 'none';
   modal.querySelector('#btn-simulate-fail').style.display = isDemo ? 'block' : 'none';
   modal.querySelector('#qr-live-waiting').style.display = isDemo ? 'none' : 'block';
   modal.querySelector('#qr-scan-help').textContent = isDemo
-    ? 'Offline demo mode: use “I’ve Scanned the QR” to continue the simulated payment.'
-    : 'Scan with Google Lens, then tap the GasBridge payment link. This demo booking will confirm automatically.';
+    ? 'Test mode: use “I’ve Scanned the QR” to continue. No real charge will be made.'
+    : 'Scan with Google Lens, then tap the GasBridge payment link to continue.';
 
   switchView('qr');
   modal.classList.add('active');
@@ -481,7 +508,7 @@ async function handlePaymentFailure() {
   );
 
   switchView('failure');
-  showToast("Demo Payment Failed", "Simulated payment failure triggered. You can retry anytime.", "error");
+  showToast("Payment Failed", "The test payment was not completed. No charge was made.", "error");
 }
 
 /**
@@ -588,8 +615,9 @@ async function handlePaymentSuccess() {
       viewBookingLink.href = `customer-tracking.html?id=${bookingId}`;
     }
 
+    stopPaymentWindow();
     switchView('success');
-    showToast("Payment Successful!", `Booking ${bookingId} has been confirmed.`, "success");
+    showToast("Test Payment Confirmed", `Booking ${bookingId} has been confirmed. No money was charged.`, "success");
 
   } catch (err) {
     console.error("Payment Confirmation Error:", err);
