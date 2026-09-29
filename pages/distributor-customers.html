@@ -300,7 +300,7 @@
               try {
                 e.currentTarget.disabled = true;
                 e.currentTarget.textContent = 'Approving...';
-                await approveCustomer(custId, distId, "distributor", user.name || "Local Distributor Depot");
+                await approveCustomer(custId, user.uid, user.name || "Local Distributor Depot");
                 showToast("Customer Approved", "Customer registration has been approved. Notification recorded.", "success");
                 await loadCustomers();
               } catch (err) {
@@ -320,7 +320,7 @@
                 try {
                   e.currentTarget.disabled = true;
                   e.currentTarget.textContent = 'Rejecting...';
-                  await rejectCustomer(custId, "Verification criteria not met.", distId, "distributor");
+                  await rejectCustomer(custId, "Verification criteria not met.", user.uid);
                   showToast("Customer Rejected", "Customer registration was rejected.", "info");
                   await loadCustomers();
                 } catch (err) {

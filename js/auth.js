@@ -25,6 +25,7 @@ import {
   saveDeliveryAgent,
   getDistributors,
   getDeliveryAgents,
+  getDeliveryAgentById,
   getServiceAreas,
   getAllCustomers,
   createNotification,
@@ -128,6 +129,20 @@ export async function requireAuth(allowedRoles = []) {
     return null;
   }
 
+  if (!isDemo && user.role !== 'admin') {
+    try {
+      const latestProfile = await getUserProfile(user.uid);
+      if (!latestProfile || !latestProfile.role) throw new Error('No GasBridge profile is linked to this account.');
+      Object.assign(user, latestProfile, { uid: user.uid, email: auth.currentUser.email, role: latestProfile.role });
+      setActiveUser(user);
+    } catch (error) {
+      clearActiveUser();
+      await signOut(auth).catch(() => {});
+      window.location.href = 'login.html';
+      return null;
+    }
+  }
+
   if (!isDemo && !['admin', 'agent', 'deliveryAgent', 'distributor'].includes(user.role)) {
     const statusNow = (user.status || user.approvalStatus || '').toLowerCase();
     if (!['approved', 'active'].includes(statusNow)) {
@@ -187,7 +202,11 @@ export async function requireAuth(allowedRoles = []) {
 // 15-minute inactivity monitor (Rule 42)
 function setupInactivityAutoLogout(user) {
   initInactivityTimer(async () => {
-    await logAuditEvent(user.uid, user.role, "USER_AUTO_LOGOUT", user.uid, "Logged out due to 15 minutes of inactivity.");
+    try {
+      await logAuditEvent(user.uid, user.role, "USER_AUTO_LOGOUT", user.uid, "Logged out due to 15 minutes of inactivity.");
+    } catch (error) {
+      console.warn('Auto logout audit record could not be saved:', error);
+    }
     clearActiveUser();
     if (!isDemo && auth) {
       try { await signOut(auth); } catch (e) {}
@@ -253,9 +272,13 @@ export async function loginUser(emailOrMobile, password) {
         return adminSession;
       }
 
-      const distributorRecords = await getDistributors();
-      const distributorRecord = distributorRecords.find(d => d.userId === firebaseUser.uid || d.email?.toLowerCase() === firebaseUser.email?.toLowerCase());
-      if (distributorRecord) {
+      const userRole = persistedProfile.role || 'customer';
+      if (userRole === 'distributor') {
+        const distributorRecord = await getDistributorById(persistedProfile.distributorId);
+        if (!distributorRecord || distributorRecord.userId !== firebaseUser.uid) {
+          await signOut(auth);
+          throw new Error('Your distributor profile could not be found. Contact support.');
+        }
         const status = (distributorRecord.status || distributorRecord.approvalStatus || 'pending').toLowerCase();
         if (!['approved', 'active'].includes(status)) {
           await signOut(auth);
@@ -266,9 +289,12 @@ export async function loginUser(emailOrMobile, password) {
         return session;
       }
 
-      const agents = await getDeliveryAgents();
-      const agentRecord = agents.find(a => a.userId === firebaseUser.uid || a.email?.toLowerCase() === firebaseUser.email?.toLowerCase());
-      if (agentRecord) {
+      if (userRole === 'agent' || userRole === 'deliveryAgent') {
+        const agentRecord = persistedProfile.agentId ? await getDeliveryAgentById(persistedProfile.agentId) : null;
+        if (!agentRecord || agentRecord.userId !== firebaseUser.uid) {
+          await signOut(auth);
+          throw new Error('Your delivery agent profile could not be found. Contact your distributor.');
+        }
         const status = (agentRecord.status || agentRecord.approvalStatus || 'pending').toLowerCase();
         if (!['approved', 'active'].includes(status)) {
           await signOut(auth);
@@ -280,9 +306,7 @@ export async function loginUser(emailOrMobile, password) {
       }
 
       // Read profile from users/{uid}
-      let userDoc = persistedProfile;
-      let userRole = userDoc?.role || 'customer';
-      let extraData = userDoc || {};
+      let extraData = persistedProfile;
 
       // If customer, merge customer profile
       if (userRole === 'customer') {
@@ -325,10 +349,17 @@ export async function loginUser(emailOrMobile, password) {
       }
 
       setActiveUser(userSession);
-      await logAuditEvent(userSession.uid, userSession.role, "USER_LOGIN", userSession.uid, "Firebase login successful.");
+      try {
+        await logAuditEvent(userSession.uid, userSession.role, "USER_LOGIN", userSession.uid, "Firebase login successful.");
+      } catch (auditError) {
+        console.warn("Login succeeded, but the audit log could not be saved:", auditError);
+      }
       return userSession;
 
     } catch (err) {
+      if (auth?.currentUser) {
+        try { await signOut(auth); } catch (signOutError) { console.warn('Could not clear the failed sign-in session:', signOutError); }
+      }
       if (err.message && (err.message.includes("waiting for") || err.message.includes("rejected") || err.message.includes("awaiting approval") || err.message.includes("Verify your email") || err.message.includes("No GasBridge profile"))) {
         throw err;
       }
@@ -756,7 +787,11 @@ export async function registerDeliveryAgent(formData) {
 export async function logoutUser() {
   const user = getCurrentUser();
   if (user) {
-    await logAuditEvent(user.uid, user.role, "USER_LOGOUT", user.uid, "User logged out.");
+    try {
+      await logAuditEvent(user.uid, user.role, "USER_LOGOUT", user.uid, "User logged out.");
+    } catch (error) {
+      console.warn('Logout audit record could not be saved:', error);
+    }
   }
   clearActiveUser();
   if (!isDemo && auth) {

@@ -24,7 +24,8 @@ import {
   SEED_SERVICE_AREAS, 
   SEED_DISTRIBUTORS, 
   SEED_DELIVERY_AGENTS, 
-  SEED_INVENTORY
+  SEED_INVENTORY,
+  ADMIN_CONFIG
 } from "./firebase-config.js";
 
 import { generateBookingId } from "./utils.js";
@@ -46,6 +47,14 @@ const STORAGE_KEYS = {
 
 function persistLocally() { return isDemo || !db; }
 function requireLiveWrite(write) { return isDemo || !db ? Promise.resolve() : write(); }
+function isCurrentAdmin() {
+  return auth?.currentUser?.email?.toLowerCase() === ADMIN_CONFIG.email.toLowerCase();
+}
+async function hasAdminAccess() {
+  if (isCurrentAdmin()) return true;
+  const uid = auth?.currentUser?.uid;
+  return uid ? (await getUserProfile(uid))?.role === 'admin' : false;
+}
 
 // Initialize Demo Seed Storage if not already populated
 function initDemoStore() {
@@ -318,7 +327,12 @@ export async function saveCustomerProfile(profileData) {
         rejectedAt: cleanProfile.rejectedAt || null, rejectedBy: cleanProfile.rejectedBy || null,
         rejectionReason: cleanProfile.rejectionReason || null, updatedAt: timestamp
       });
-      batch.update(doc(db, 'users', cleanProfile.uid), { status: cleanProfile.status, approvalStatus: cleanProfile.approvalStatus, updatedAt: timestamp });
+      batch.update(doc(db, 'users', cleanProfile.uid), {
+        status: cleanProfile.status, approvalStatus: cleanProfile.approvalStatus, active: cleanProfile.active,
+        approvedAt: cleanProfile.approvedAt || null, approvedBy: cleanProfile.approvedBy || null,
+        rejectedAt: cleanProfile.rejectedAt || null, rejectedBy: cleanProfile.rejectedBy || null,
+        rejectionReason: cleanProfile.rejectionReason || null, updatedAt: timestamp
+      });
       await batch.commit();
       return cleanProfile;
     }
@@ -467,7 +481,7 @@ export async function saveDeliveryAgent(agentData) {
   };
   if (!persistLocally() && cleanAgent.status === 'pending' && cleanAgent.distributorId) {
     const distributor = await getDistributorById(cleanAgent.distributorId);
-    if (!distributor || (distributor.userId !== auth.currentUser?.uid && (await getUserProfile(auth.currentUser?.uid || ''))?.role !== 'admin')) {
+    if (!distributor || (distributor.userId !== auth.currentUser?.uid && !(await hasAdminAccess()))) {
       throw new Error('A delivery agent can only register with its assigned distributor.');
     }
   }
@@ -480,7 +494,12 @@ export async function saveDeliveryAgent(agentData) {
         rejectedAt: cleanAgent.rejectedAt || null, rejectedBy: cleanAgent.rejectedBy || null,
         rejectionReason: cleanAgent.rejectionReason || null, updatedAt: timestamp
       });
-      batch.update(doc(db, 'users', cleanAgent.userId), { status: cleanAgent.status, approvalStatus: cleanAgent.status, updatedAt: timestamp });
+      batch.update(doc(db, 'users', cleanAgent.userId), {
+        status: cleanAgent.status, approvalStatus: cleanAgent.status, active: cleanAgent.active,
+        approvedAt: cleanAgent.approvedAt || null, approvedBy: cleanAgent.approvedBy || null,
+        rejectedAt: cleanAgent.rejectedAt || null, rejectedBy: cleanAgent.rejectedBy || null,
+        rejectionReason: cleanAgent.rejectionReason || null, updatedAt: timestamp
+      });
       await batch.commit();
       return cleanAgent;
     }
@@ -512,8 +531,7 @@ export async function saveDeliveryAgent(agentData) {
 
 export async function saveServiceArea(areaData) {
   if (!persistLocally()) {
-    const caller = await getUserProfile(auth.currentUser?.uid || '');
-    if (caller?.role !== 'admin') throw new Error('Only an administrator can create service areas.');
+    if (!(await hasAdminAccess())) throw new Error('Only an administrator can create service areas.');
     await setDoc(doc(db, "serviceAreas", areaData.id), areaData, { merge: true });
   }
   if (!persistLocally()) return areaData;
@@ -555,8 +573,7 @@ export async function getDistributorInventory(distributorId) {
 export async function initializeDistributorInventory(distributorId, inventoryData) {
   const payload = { ...inventoryData, distributorId, updatedAt: new Date().toISOString() };
   if (!persistLocally()) {
-    const caller = await getUserProfile(auth.currentUser?.uid || '');
-    if (caller?.role !== 'admin') throw new Error('Only an administrator can initialize distributor inventory.');
+    if (!(await hasAdminAccess())) throw new Error('Only an administrator can initialize distributor inventory.');
     await setDoc(doc(db, 'inventory', distributorId), payload);
     return payload;
   }
@@ -655,7 +672,14 @@ export async function createBooking(bookingData) {
       });
       tx.update(inventoryRef, {
         [`${typeKey}.available`]: Number(stock.available || 0) - Number(fullBooking.quantity),
-        [`${typeKey}.reserved`]: Number(stock.reserved || 0) + Number(fullBooking.quantity)
+        [`${typeKey}.reserved`]: Number(stock.reserved || 0) + Number(fullBooking.quantity),
+        lastReservation: {
+          bookingId: fullBooking.bookingId,
+          customerId: fullBooking.customerId,
+          cylinderType: typeKey,
+          quantity: Number(fullBooking.quantity),
+          transactionReference: fullBooking.transactionReference
+        }
       });
     });
     return fullBooking;
@@ -682,6 +706,9 @@ export async function createBooking(bookingData) {
     const autoAgent = await findAndAssignEligibleAgent(fullBooking);
     if (autoAgent) {
       fullBooking.deliveryAgentId = autoAgent.id;
+      fullBooking.deliveryAgentName = autoAgent.name || '';
+      fullBooking.deliveryAgentMobile = autoAgent.mobile || '';
+      fullBooking.deliveryAgentVehicleNumber = autoAgent.vehicleNumber || '';
       fullBooking.statusTimeline.push({
         status: "agent_assigned",
         time: new Date().toISOString(),
@@ -689,6 +716,9 @@ export async function createBooking(bookingData) {
       });
       await updateBookingRecord(fullBooking.bookingId, {
         deliveryAgentId: autoAgent.id,
+        deliveryAgentName: fullBooking.deliveryAgentName,
+        deliveryAgentMobile: fullBooking.deliveryAgentMobile,
+        deliveryAgentVehicleNumber: fullBooking.deliveryAgentVehicleNumber,
         statusTimeline: fullBooking.statusTimeline
       });
       const savedBooking = bookings.find(b => b.bookingId === bookingId);
@@ -740,7 +770,7 @@ export async function getBookings(filter = {}) {
   let all = [];
   if (!isDemo && db) {
     try {
-      const currentUser = await getUserProfile(auth.currentUser?.uid || '');
+      const currentUser = isCurrentAdmin() ? { role: 'admin' } : await getUserProfile(auth.currentUser?.uid || '');
       let bookingQuery = collection(db, 'bookings');
       if (currentUser?.role === 'customer') bookingQuery = query(bookingQuery, where('customerId', '==', auth.currentUser.uid));
       else if (currentUser?.role === 'agent') bookingQuery = query(bookingQuery, where('deliveryAgentId', '==', currentUser.agentId));
@@ -798,6 +828,9 @@ export async function updateBookingRecord(bookingId, updates) {
       if (user?.role !== 'distributor' || user.distributorId !== existing.distributorId) throw new Error('Only the assigned distributor can assign this booking.');
       const agent = await getDeliveryAgentById(updates.deliveryAgentId);
       if (!agent || agent.status !== 'approved' || agent.distributorId !== existing.distributorId) throw new Error('Select an approved agent from this distributor.');
+      cleanUpdates.deliveryAgentName = agent.name || '';
+      cleanUpdates.deliveryAgentMobile = agent.mobile || '';
+      cleanUpdates.deliveryAgentVehicleNumber = agent.vehicleNumber || '';
     }
     await requireLiveWrite(() => updateDoc(doc(db, "bookings", bookingId), cleanUpdates));
     return { bookingId, ...cleanUpdates };
@@ -891,7 +924,8 @@ export async function updateBookingStatus(bookingId, newStatus, note = "", actor
     "customer",
     statusLabels[newStatus] || "Order Status Update",
     `Booking ${bookingId}: ${note || `Delivery status is now ${newStatus.replace(/_/g, ' ')}.`}`,
-    `customer-tracking.html?id=${bookingId}`
+    `customer-tracking.html?id=${bookingId}`,
+    'in_app', 'sent', null, { bookingId }
   );
 
   await logAuditEvent(
@@ -956,7 +990,7 @@ export async function getPaymentByBookingId(bookingId) {
    NOTIFICATIONS & AUDIT LOGS (Rule 35, 41)
    ========================================================================== */
 
-export async function createNotification(recipientUserId, role, title, message, link = "", channel = "in_app", status = "sent", error = null) {
+export async function createNotification(recipientUserId, role, title, message, link = "", channel = "in_app", status = "sent", error = null, metadata = {}) {
   const notif = {
     id: "notif-" + Date.now() + "-" + Math.floor(Math.random() * 1000),
     recipientUserId,
@@ -968,6 +1002,7 @@ export async function createNotification(recipientUserId, role, title, message, 
     status,
     error,
     link,
+    ...metadata,
     read: false,
     createdAt: new Date().toISOString()
   };
@@ -988,15 +1023,18 @@ export async function getNotifications(recipientUserId, role = null) {
   if (!isDemo && db) {
     const currentUid = auth.currentUser?.uid;
     if (!currentUid) return [];
-    const snap = await getDocs(query(collection(db, "notifications"), where("recipientUserId", "==", currentUid)));
-    all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const queries = [query(collection(db, "notifications"), where("recipientUserId", "==", currentUid))];
+    if (isCurrentAdmin()) queries.push(query(collection(db, "notifications"), where("recipientUserId", "==", ADMIN_CONFIG.email)));
+    const snapshots = await Promise.all(queries.map(notificationQuery => getDocs(notificationQuery)));
+    all = snapshots.flatMap(snap => snap.docs.map(d => ({ id: d.id, ...d.data() })));
   }
   if (all.length === 0 && persistLocally()) {
     all = JSON.parse(localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS) || '[]');
   }
 
   return all.filter(n => {
-    if (n.recipientUserId === recipientUserId || n.recipientId === recipientUserId) return true;
+    if (n.recipientUserId === recipientUserId || n.recipientId === recipientUserId ||
+        (isCurrentAdmin() && n.recipientUserId === ADMIN_CONFIG.email)) return true;
     return false;
   }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
@@ -1039,7 +1077,7 @@ export async function logAuditEvent(actorUserId, actorRole, action, targetUserId
 
 export async function getAuditLogs() {
   if (!isDemo && db) {
-    if ((await getUserProfile(auth.currentUser?.uid || ''))?.role !== 'admin') return [];
+    if (!(await hasAdminAccess())) return [];
     const snap = await getDocs(collection(db, "auditLogs"));
     return snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
   }
@@ -1055,7 +1093,7 @@ export async function getAuditLogs() {
 export async function getAllCustomers() {
   if (!isDemo && db) {
     try {
-      if ((await getUserProfile(auth.currentUser?.uid || ''))?.role !== 'admin') return [];
+      if (!(await hasAdminAccess())) return [];
       const snap = await getDocs(collection(db, "customers"));
       return snap.docs.map(d => ({ uid: d.id, ...d.data() }));
     } catch (e) { throw e; }
@@ -1065,13 +1103,13 @@ export async function getAllCustomers() {
 }
 
 export async function getPendingCustomers() {
-  if (!persistLocally() && (await getUserProfile(auth.currentUser?.uid || ''))?.role !== 'admin') return [];
+  if (!persistLocally() && !(await hasAdminAccess())) return [];
   const customers = await getAllCustomers();
   return customers.filter(customer => customer.status === 'pending' || customer.approvalStatus === 'pending');
 }
 
 export async function getPendingDeliveryAgentsForAdmin() {
-  if (!persistLocally() && (await getUserProfile(auth.currentUser?.uid || ''))?.role !== 'admin') return [];
+  if (!persistLocally() && !(await hasAdminAccess())) return [];
   const agents = await getDeliveryAgents();
   return agents.filter(agent => agent.status === 'pending' || agent.approvalStatus === 'pending');
 }
@@ -1096,7 +1134,8 @@ async function persistApprovalProfile(collectionName, recordId, record, userId) 
 // 1. ADMIN APPROVES DISTRIBUTOR (Rule 4, 5)
 // --------------------------------------------------------------------------
 export async function approveDistributor(distributorId, approvedBy = "admin") {
-  if (!persistLocally() && (await getUserProfile(approvedBy))?.role !== 'admin') throw new Error('Only the administrator can approve distributors.');
+  if (!persistLocally() && !(await hasAdminAccess())) throw new Error('Only the administrator can approve distributors.');
+  approvedBy = auth?.currentUser?.uid || approvedBy;
   const dists = await getDistributors();
   const dist = dists.find(d => d.id === distributorId);
   if (!dist) throw new Error("Distributor record not found.");
@@ -1171,7 +1210,8 @@ export async function approveDistributor(distributorId, approvedBy = "admin") {
 // 2. ADMIN REJECTS DISTRIBUTOR (Rule 4)
 // --------------------------------------------------------------------------
 export async function rejectDistributor(distributorId, reason = "Registration verification criteria not met.", rejectedBy = "admin") {
-  if (!persistLocally() && (await getUserProfile(rejectedBy))?.role !== 'admin') throw new Error('Only the administrator can reject distributors.');
+  if (!persistLocally() && !(await hasAdminAccess())) throw new Error('Only the administrator can reject distributors.');
+  rejectedBy = auth?.currentUser?.uid || rejectedBy;
   const dists = await getDistributors();
   const dist = dists.find(d => d.id === distributorId);
   if (!dist) throw new Error("Distributor record not found.");
@@ -1208,9 +1248,12 @@ export async function getPendingDistributors() {
 export async function approveCustomer(customerId, approvedBy = "distributor", distributorName = "Authorized Distributor") {
   const cust = await getCustomerProfile(customerId);
   if (!cust) throw new Error("Customer record not found.");
-  if (!persistLocally() && ((await getUserProfile(approvedBy))?.distributorId !== cust.distributorId || (await getUserProfile(approvedBy))?.role !== 'distributor')) {
+  const approver = await getUserProfile(auth?.currentUser?.uid || approvedBy);
+  const adminApproval = await hasAdminAccess();
+  if (!persistLocally() && !adminApproval && (approver?.distributorId !== cust.distributorId || approver?.role !== 'distributor' || auth?.currentUser?.uid !== approvedBy)) {
     throw new Error('Only the assigned distributor can approve this customer.');
   }
+  approvedBy = auth?.currentUser?.uid || approvedBy;
 
   const nowIso = new Date().toISOString();
   cust.status = "approved";
@@ -1235,7 +1278,7 @@ export async function approveCustomer(customerId, approvedBy = "distributor", di
 
   await logAuditEvent(
     approvedBy,
-    "distributor",
+    adminApproval ? "admin" : "distributor",
     "CUSTOMER_APPROVED",
     customerId,
     `Distributor (${distributorName}) approved customer connection for ${cust.name} (${cust.email}). Cylinder type: ${cust.cylinderType || 'domestic'}.`
@@ -1250,9 +1293,12 @@ export async function approveCustomer(customerId, approvedBy = "distributor", di
 export async function rejectCustomer(customerId, reason = "Address verification mismatch or unsupported routing.", rejectedBy = "distributor") {
   const cust = await getCustomerProfile(customerId);
   if (!cust) throw new Error("Customer record not found.");
-  if (!persistLocally() && ((await getUserProfile(rejectedBy))?.distributorId !== cust.distributorId || (await getUserProfile(rejectedBy))?.role !== 'distributor')) {
+  const approver = await getUserProfile(auth?.currentUser?.uid || rejectedBy);
+  const adminApproval = await hasAdminAccess();
+  if (!persistLocally() && !adminApproval && (approver?.distributorId !== cust.distributorId || approver?.role !== 'distributor' || auth?.currentUser?.uid !== rejectedBy)) {
     throw new Error('Only the assigned distributor can reject this customer.');
   }
+  rejectedBy = auth?.currentUser?.uid || rejectedBy;
 
   const nowIso = new Date().toISOString();
   cust.status = "rejected";
@@ -1266,7 +1312,7 @@ export async function rejectCustomer(customerId, reason = "Address verification 
 
   await logAuditEvent(
     rejectedBy,
-    "distributor",
+    adminApproval ? "admin" : "distributor",
     "CUSTOMER_REJECTED",
     customerId,
     `Distributor declined customer registration for ${cust.name}. Reason: ${reason}`
@@ -1305,9 +1351,12 @@ export async function getDistributorCustomers(distributorId = null) {
 export async function approveDeliveryAgent(agentId, approvedBy = "distributor", distributorName = "Authorized Distributor") {
   const agent = await getDeliveryAgentById(agentId);
   if (!agent) throw new Error("Delivery agent record not found.");
-  if (!persistLocally() && ((await getUserProfile(approvedBy))?.distributorId !== agent.distributorId || (await getUserProfile(approvedBy))?.role !== 'distributor')) {
+  const approver = await getUserProfile(auth?.currentUser?.uid || approvedBy);
+  const adminApproval = await hasAdminAccess();
+  if (!persistLocally() && !adminApproval && (approver?.distributorId !== agent.distributorId || approver?.role !== 'distributor' || auth?.currentUser?.uid !== approvedBy)) {
     throw new Error('Only the assigned distributor can approve this agent.');
   }
+  approvedBy = auth?.currentUser?.uid || approvedBy;
 
   const nowIso = new Date().toISOString();
   agent.status = "approved";
@@ -1333,7 +1382,7 @@ export async function approveDeliveryAgent(agentId, approvedBy = "distributor", 
 
   await logAuditEvent(
     approvedBy,
-    "distributor",
+    adminApproval ? "admin" : "distributor",
     "AGENT_APPROVED",
     agentId,
     `Distributor (${distributorName}) approved delivery agent: ${agent.name} (${agent.vehicleNumber || 'Van'}).`
@@ -1348,9 +1397,12 @@ export async function approveDeliveryAgent(agentId, approvedBy = "distributor", 
 export async function rejectDeliveryAgent(agentId, reason = "Depot roster capacity reached.", rejectedBy = "distributor") {
   const agent = await getDeliveryAgentById(agentId);
   if (!agent) throw new Error("Delivery agent record not found.");
-  if (!persistLocally() && ((await getUserProfile(rejectedBy))?.distributorId !== agent.distributorId || (await getUserProfile(rejectedBy))?.role !== 'distributor')) {
+  const approver = await getUserProfile(auth?.currentUser?.uid || rejectedBy);
+  const adminApproval = await hasAdminAccess();
+  if (!persistLocally() && !adminApproval && (approver?.distributorId !== agent.distributorId || approver?.role !== 'distributor' || auth?.currentUser?.uid !== rejectedBy)) {
     throw new Error('Only the assigned distributor can reject this agent.');
   }
+  rejectedBy = auth?.currentUser?.uid || rejectedBy;
 
   const nowIso = new Date().toISOString();
   agent.status = "rejected";
@@ -1365,7 +1417,7 @@ export async function rejectDeliveryAgent(agentId, reason = "Depot roster capaci
 
   await logAuditEvent(
     rejectedBy,
-    "distributor",
+    adminApproval ? "admin" : "distributor",
     "AGENT_REJECTED",
     agentId,
     `Distributor rejected agent application for ${agent.name}. Reason: ${reason}`

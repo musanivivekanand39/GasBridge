@@ -15,7 +15,9 @@ import {
   deductInventoryStock,
   logAuditEvent, 
   savePaymentRecord,
-  getPaymentByBookingId
+  getPaymentByBookingId,
+  getDistributorById,
+  createNotification
 } from "./firestore.js";
 import { formatCurrency, formatDateTime, showToast, generateBookingId } from "./utils.js";
 import { generateQRCodeSVG } from "./qrcode.js";
@@ -448,13 +450,31 @@ async function handlePaymentSuccess() {
     }
 
     // 3. Log audit event
-    await logAuditEvent(
-      activeOrderContext.customer.uid,
-      "customer",
-      "PAYMENT_SUCCESS",
-      paymentId,
-      `Demo QR payment of ${formatCurrency(activeOrderContext.totalAmount)} verified for booking ${bookingId} (Ref: ${currentTransactionRef}).`
-    );
+    try {
+      await logAuditEvent(
+        activeOrderContext.customer.uid,
+        "customer",
+        "PAYMENT_SUCCESS",
+        paymentId,
+        `Demo QR payment of ${formatCurrency(activeOrderContext.totalAmount)} verified for booking ${bookingId} (Ref: ${currentTransactionRef}).`
+      );
+    } catch (auditError) {
+      console.warn('Payment succeeded, but the audit record could not be saved:', auditError);
+    }
+    try {
+      const distributor = await getDistributorById(activeOrderContext.distributorId);
+      if (distributor) {
+        await createNotification(
+          distributor.userId || distributor.id,
+          'distributor',
+          'New LPG Booking',
+          `Paid booking ${bookingId} is ready for depot processing.`,
+          `distributor-bookings.html?id=${bookingId}`
+        );
+      }
+    } catch (notificationError) {
+      console.warn('Payment succeeded, but the distributor notification could not be saved:', notificationError);
+    }
 
     // 4. Populate Success Screen
     modal.querySelector('#success-booking-id').textContent = bookingId;

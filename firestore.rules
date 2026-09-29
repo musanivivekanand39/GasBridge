@@ -26,6 +26,13 @@ service cloud.firestore {
         get(/databases/$(database)/documents/deliveryAgents/$(agentId)).data.status == 'approved' &&
         get(/databases/$(database)/documents/deliveryAgents/$(agentId)).data.distributorId == distributorId();
     }
+    function assignedAgentDetailsMatch() {
+      let agent = get(/databases/$(database)/documents/deliveryAgents/$(request.resource.data.deliveryAgentId)).data;
+      return agent.status == 'approved' && agent.distributorId == resource.data.distributorId &&
+        request.resource.data.deliveryAgentName == agent.name &&
+        request.resource.data.deliveryAgentMobile == agent.mobile &&
+        request.resource.data.deliveryAgentVehicleNumber == agent.vehicleNumber;
+    }
     function distributorNotificationTarget() {
       return role() == 'distributor' && (
         (request.resource.data.role == 'customer' &&
@@ -53,6 +60,32 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.resource.data.recipientUserId)).data.role == 'distributor' &&
         get(/databases/$(database)/documents/users/$(request.resource.data.recipientUserId)).data.distributorId == distributorId();
     }
+    function assignedAgentBookingNotificationTarget() {
+      let bookingPath = /databases/$(database)/documents/bookings/$(request.resource.data.bookingId);
+      return role() == 'agent' && request.resource.data.role == 'customer' &&
+        request.resource.data.bookingId is string && exists(bookingPath) &&
+        get(bookingPath).data.deliveryAgentId == me().agentId &&
+        get(bookingPath).data.customerId == request.resource.data.recipientUserId;
+    }
+    function validCustomerInventoryReservation(id) {
+      let reservation = request.resource.data.lastReservation;
+      let bookingPath = /databases/$(database)/documents/bookings/$(reservation.bookingId);
+      let booking = getAfter(bookingPath).data;
+      return role() == 'customer' && reservation.customerId == request.auth.uid &&
+        reservation.bookingId is string && reservation.transactionReference == booking.transactionReference &&
+        reservation.cylinderType == booking.cylinderType && reservation.quantity == booking.quantity &&
+        id == booking.distributorId && booking.customerId == request.auth.uid &&
+        booking.paymentStatus == 'paid' && booking.bookingStatus == 'confirmed' &&
+        existsAfter(/databases/$(database)/documents/payments/$(reservation.transactionReference)) &&
+        (booking.cylinderType == 'domestic' &&
+          resource.data.domestic.available >= booking.quantity &&
+          request.resource.data.domestic.available == resource.data.domestic.available - booking.quantity &&
+          request.resource.data.domestic.reserved == resource.data.domestic.reserved + booking.quantity ||
+         booking.cylinderType == 'commercial' &&
+          resource.data.commercial.available >= booking.quantity &&
+          request.resource.data.commercial.available == resource.data.commercial.available - booking.quantity &&
+          request.resource.data.commercial.reserved == resource.data.commercial.reserved + booking.quantity);
+    }
 
     match /users/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || admin());
@@ -64,7 +97,8 @@ service cloud.firestore {
         admin() ||
         (role() == 'distributor' && resource.data.role in ['customer', 'agent'] &&
           resource.data.distributorId == distributorId() &&
-          request.resource.data.approvedBy == request.auth.uid &&
+          ((request.resource.data.status == 'approved' && request.resource.data.approvedBy == request.auth.uid) ||
+           (request.resource.data.status == 'rejected' && request.resource.data.rejectedBy == request.auth.uid)) &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'approvalStatus', 'active', 'approvedAt', 'approvedBy', 'rejectedAt', 'rejectedBy', 'rejectionReason', 'updatedAt']))
       );
       allow delete: if admin();
@@ -81,7 +115,8 @@ service cloud.firestore {
           request.resource.data.distributorId == resource.data.distributorId &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'mobile', 'email', 'address', 'pincode', 'serviceAreaId', 'serviceAreaName', 'cylinderType', 'updatedAt'])) ||
         admin() || (role() == 'distributor' && resource.data.distributorId == distributorId() &&
-          request.resource.data.approvedBy == request.auth.uid &&
+          ((request.resource.data.status == 'approved' && request.resource.data.approvedBy == request.auth.uid) ||
+           (request.resource.data.status == 'rejected' && request.resource.data.rejectedBy == request.auth.uid)) &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'approvalStatus', 'active', 'approvedAt', 'approvedBy', 'rejectedAt', 'rejectedBy', 'rejectionReason', 'updatedAt']))
       );
       allow delete: if admin();
@@ -103,7 +138,8 @@ service cloud.firestore {
       allow update: if cleanProfile() && (admin() ||
         (role() == 'distributor' && resource.data.distributorId == distributorId() &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'approvalStatus', 'active', 'dutyStatus', 'approvedAt', 'approvedBy', 'rejectedAt', 'rejectedBy', 'rejectionReason', 'updatedAt']) &&
-          request.resource.data.diff(resource.data).affectedKeys().hasAny(['approvedBy']) && request.resource.data.approvedBy == request.auth.uid) ||
+          ((request.resource.data.status == 'approved' && request.resource.data.approvedBy == request.auth.uid) ||
+           (request.resource.data.status == 'rejected' && request.resource.data.rejectedBy == request.auth.uid))) ||
         (signedIn() && resource.data.userId == request.auth.uid && request.resource.data.status == resource.data.status &&
           request.resource.data.approvalStatus == resource.data.approvalStatus && request.resource.data.distributorId == resource.data.distributorId &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'mobile', 'address', 'pincode', 'vehicleType', 'vehicleNumber', 'dutyStatus', 'updatedAt']))
@@ -118,20 +154,27 @@ service cloud.firestore {
     match /inventory/{id} {
       allow read: if signedIn() && (admin() || (role() == 'distributor' && distributorId() == id) || role() == 'customer');
       allow create: if admin();
-      allow update: if distributorFor(id) &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['domestic', 'commercial', 'lowStockThreshold', 'updatedAt', 'distributorId']) &&
-        request.resource.data.distributorId == id;
+      allow update: if request.resource.data.distributorId == id && (
+        (distributorFor(id) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['domestic', 'commercial', 'lowStockThreshold', 'updatedAt', 'distributorId'])) ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['domestic', 'commercial', 'lastReservation', 'updatedAt']) &&
+          validCustomerInventoryReservation(id))
+      );
       allow delete: if admin();
     }
 
     match /bookings/{id} {
       allow create: if signedIn() && request.resource.data.customerId == request.auth.uid &&
-        role() == 'customer' && request.resource.data.paymentStatus == 'unpaid' && request.resource.data.bookingStatus == 'pending_payment' &&
+        role() == 'customer' && exists(/databases/$(database)/documents/customers/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/customers/$(request.auth.uid)).data.status == 'approved' &&
+        get(/databases/$(database)/documents/customers/$(request.auth.uid)).data.distributorId == request.resource.data.distributorId &&
+        request.resource.data.paymentStatus == 'unpaid' && request.resource.data.bookingStatus == 'pending_payment' &&
         request.resource.data.cylinderType in ['domestic', 'commercial'] &&
-        request.resource.data.quantity > 0 && request.resource.data.quantity <= 3 && request.resource.data.totalAmount > 0;
+        request.resource.data.quantity is int && request.resource.data.quantity > 0 && request.resource.data.quantity <= 3 &&
+        request.resource.data.unitPrice == (request.resource.data.cylinderType == 'domestic' ? 950 : 1850) &&
+        request.resource.data.totalAmount == request.resource.data.unitPrice * request.resource.data.quantity;
       allow read: if signedIn() && (resource.data.customerId == request.auth.uid || admin() ||
         (role() == 'distributor' && resource.data.distributorId == distributorId()) ||
-        (role() == 'agent' && request.auth.uid == resource.data.deliveryAgentId));
+        (role() == 'agent' && me().agentId == resource.data.deliveryAgentId));
       allow update: if admin() ||
         (role() == 'distributor' && resource.data.distributorId == distributorId() && resource.data.bookingStatus == 'delivered' &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bookingStatus', 'statusTimeline', 'updatedAt']) &&
@@ -143,16 +186,16 @@ service cloud.firestore {
           request.resource.data.transactionReference.matches('GBPAY-[A-Z0-9]{8}') &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['paymentStatus', 'bookingStatus', 'paymentId', 'transactionReference', 'updatedAt', 'estimatedDelivery'])) ||
         (role() == 'distributor' && resource.data.distributorId == distributorId() &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deliveryAgentId', 'statusTimeline', 'updatedAt']) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deliveryAgentId', 'deliveryAgentName', 'deliveryAgentMobile', 'deliveryAgentVehicleNumber', 'statusTimeline', 'updatedAt']) &&
           (request.resource.data.deliveryAgentId == resource.data.deliveryAgentId ||
-            (resource.data.bookingStatus in ['confirmed', 'processing'] && assignedAgentExists(request.resource.data.deliveryAgentId))) &&
+            (resource.data.bookingStatus in ['confirmed', 'processing'] && assignedAgentExists(request.resource.data.deliveryAgentId) && assignedAgentDetailsMatch())) &&
           (request.resource.data.deliveryAgentId == resource.data.deliveryAgentId || request.resource.data.bookingStatus == 'processing') &&
           ((resource.data.bookingStatus == 'confirmed' && request.resource.data.bookingStatus == 'processing') ||
            (resource.data.bookingStatus == 'confirmed' && request.resource.data.bookingStatus == 'confirmed') ||
            (resource.data.bookingStatus == 'processing' && request.resource.data.bookingStatus == 'processing') ||
            (resource.data.bookingStatus == 'processing' && resource.data.deliveryAgentId != '' && request.resource.data.bookingStatus == 'agent_assigned') ||
            request.resource.data.bookingStatus == resource.data.bookingStatus)) ||
-        (role() == 'agent' && request.auth.uid == resource.data.deliveryAgentId &&
+        (role() == 'agent' && me().agentId == resource.data.deliveryAgentId &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bookingStatus', 'statusTimeline', 'updatedAt']) &&
           ((resource.data.bookingStatus == 'agent_assigned' && request.resource.data.bookingStatus == 'picked_up') ||
            (resource.data.bookingStatus == 'picked_up' && request.resource.data.bookingStatus == 'out_for_delivery') ||
@@ -165,11 +208,13 @@ service cloud.firestore {
         (role() == 'distributor' && get(/databases/$(database)/documents/bookings/$(resource.data.bookingId)).data.distributorId == distributorId()));
       allow create: if signedIn() && role() == 'customer' && request.resource.data.customerId == request.auth.uid &&
         id.matches('GBPAY-[A-Z0-9]{8}') && request.resource.data.paymentId == id &&
-        get(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.customerId == request.auth.uid &&
-        get(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.paymentStatus == 'paid' &&
-        get(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.transactionReference == id &&
-        get(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.paymentId == id &&
-        request.resource.data.transactionReference == get(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.transactionReference &&
+        getAfter(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.customerId == request.auth.uid &&
+        getAfter(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.paymentStatus == 'paid' &&
+        getAfter(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.bookingStatus == 'confirmed' &&
+        getAfter(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.transactionReference == id &&
+        getAfter(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.paymentId == id &&
+        request.resource.data.amount == getAfter(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.totalAmount &&
+        request.resource.data.transactionReference == getAfter(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.transactionReference &&
         !('cardNumber' in request.resource.data) && !('cvv' in request.resource.data) && !('upiPin' in request.resource.data);
       allow update, delete: if false;
     }
@@ -177,7 +222,7 @@ service cloud.firestore {
     match /notifications/{id} {
       allow read: if signedIn() && (resource.data.recipientUserId == request.auth.uid || admin());
       allow create: if signedIn() && (admin() || request.resource.data.recipientUserId == request.auth.uid ||
-        distributorNotificationTarget() || customerNotificationTarget() || agentNotificationTarget());
+        distributorNotificationTarget() || customerNotificationTarget() || agentNotificationTarget() || assignedAgentBookingNotificationTarget());
       allow update: if signedIn() && resource.data.recipientUserId == request.auth.uid &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
       allow delete: if admin();

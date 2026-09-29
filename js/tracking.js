@@ -4,7 +4,7 @@
  */
 
 import { getCurrentUser } from "./auth.js";
-import { getBookingById, getBookings, getDeliveryAgents, getDistributors } from "./firestore.js";
+import { getBookingById, getBookings, getDistributors } from "./firestore.js";
 import { formatCurrency, formatDateTime, getStatusBadgeHTML, escapeHTML } from "./utils.js";
 
 const STEPS_ORDER = [
@@ -54,8 +54,11 @@ async function loadAndRenderTracking(bookingId, isSilentRefresh = false) {
   const distributors = await getDistributors();
   const distributor = distributors.find(d => d.id === booking.distributorId);
 
-  const agents = await getDeliveryAgents(booking.distributorId);
-  const agent = agents.find(a => a.id === booking.deliveryAgentId);
+  const agent = booking.deliveryAgentId ? {
+    name: booking.deliveryAgentName,
+    mobile: booking.deliveryAgentMobile,
+    vehicleNumber: booking.deliveryAgentVehicleNumber
+  } : null;
 
   // 1. Update Booking ID & Status in Header
   const idEl = document.getElementById('track-booking-id');

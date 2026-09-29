@@ -287,7 +287,7 @@
               try {
                 e.currentTarget.disabled = true;
                 e.currentTarget.textContent = 'Approving...';
-                await approveDeliveryAgent(agentId, distId);
+                await approveDeliveryAgent(agentId, user.uid, user.name || 'Local Distributor Depot');
                 showToast("Agent Approved", "Delivery agent approved! Notification recorded.", "success");
                 await loadAgents();
               } catch (err) {
@@ -307,7 +307,7 @@
                 try {
                   e.currentTarget.disabled = true;
                   e.currentTarget.textContent = 'Rejecting...';
-                  await rejectDeliveryAgent(agentId, "Depot fleet capacity reached.");
+                  await rejectDeliveryAgent(agentId, "Depot fleet capacity reached.", user.uid);
                   showToast("Agent Rejected", "The agent registration was rejected.", "info");
                   await loadAgents();
                 } catch (err) {
