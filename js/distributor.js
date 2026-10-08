@@ -71,7 +71,7 @@ export async function initDistributorDashboard() {
   }
 
   // 1. Fetch bookings strictly for this distributor
-  const bookings = await getBookings({ distributorId, paymentStatus: 'paid' });
+  const bookings = await getBookings({ distributorId, paymentStatus: ['paid', 'cod_pending'] });
 
   // 2. Fetch inventory
   const inventory = await getDistributorInventory(distributorId);
@@ -396,7 +396,7 @@ export async function initDistributorBookingsPage() {
   if (!user) return;
 
   const distributorId = resolveDistributorId(user);
-  const bookings = await getBookings({ distributorId, paymentStatus: 'paid' });
+  const bookings = await getBookings({ distributorId, paymentStatus: ['paid', 'cod_pending'] });
   const agents = (await getDeliveryAgents(distributorId)).filter(a => a.status === 'approved' && a.active !== false);
 
   const tbody = document.getElementById('distributor-bookings-full-tbody');
@@ -423,7 +423,7 @@ function renderBookingsTable(bookings, agents) {
   if (!tbody) return;
 
   if (bookings.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-muted);">No bookings found matching filter.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 2rem; color: var(--text-muted);">No paid or cash-on-delivery bookings found matching this filter.</td></tr>`;
     return;
   }
 
@@ -441,6 +441,7 @@ function renderBookingsTable(bookings, agents) {
           <div style="font-size: 0.78rem; font-weight: 700; color: var(--primary);">PIN: ${escapeHTML(b.deliveryAddress.pincode)}</div>
         </td>
         <td>${escapeHTML(b.cylinderName || 'Domestic LPG')} (${b.quantity})</td>
+        <td>${getStatusBadgeHTML(b.paymentStatus)}</td>
         <td>${getStatusBadgeHTML(b.bookingStatus)}</td>
         <td>
           ${agent ? `

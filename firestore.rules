@@ -84,8 +84,9 @@ service cloud.firestore {
         reservation.bookingId is string && reservation.transactionReference == booking.transactionReference &&
         reservation.cylinderType == booking.cylinderType && reservation.quantity == booking.quantity &&
         id == booking.distributorId && booking.customerId == request.auth.uid &&
-        booking.paymentStatus == 'paid' && booking.bookingStatus == 'confirmed' &&
-        existsAfter(/databases/$(database)/documents/payments/$(reservation.transactionReference)) &&
+        booking.paymentStatus in ['paid', 'cod_pending'] && booking.bookingStatus == 'confirmed' &&
+        ((booking.paymentStatus == 'paid' && existsAfter(/databases/$(database)/documents/payments/$(reservation.transactionReference))) ||
+         (booking.paymentStatus == 'cod_pending' && booking.paymentMethod == 'cod')) &&
         (booking.cylinderType == 'domestic' &&
           resource.data.domestic.available >= booking.quantity &&
           request.resource.data.domestic.available == resource.data.domestic.available - booking.quantity &&
@@ -209,11 +210,18 @@ service cloud.firestore {
           request.resource.data.paymentStatus == 'unpaid' && request.resource.data.bookingStatus == 'cancelled' &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bookingStatus', 'statusTimeline', 'updatedAt'])) ||
         (role() == 'customer' && resource.data.customerId == request.auth.uid &&
+          resource.data.paymentStatus == 'unpaid' && resource.data.bookingStatus == 'pending_payment' &&
+          request.resource.data.paymentStatus == 'cod_pending' && request.resource.data.bookingStatus == 'confirmed' &&
+          request.resource.data.paymentMethod == 'cod' &&
+          request.resource.data.transactionReference.matches('GBPAY-[A-Z0-9]{8}') &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['paymentStatus', 'paymentMethod', 'transactionReference', 'bookingStatus', 'statusTimeline', 'updatedAt', 'estimatedDelivery'])) ||
+        (role() == 'customer' && resource.data.customerId == request.auth.uid &&
           resource.data.paymentStatus == 'unpaid' && request.resource.data.paymentStatus == 'paid' &&
+          request.resource.data.paymentMethod in ['upi_qr', 'card'] &&
           request.resource.data.bookingStatus == 'confirmed' && request.resource.data.paymentId.matches('GBPAY-[A-Z0-9]{8}') &&
           request.resource.data.paymentId == request.resource.data.transactionReference &&
           request.resource.data.transactionReference.matches('GBPAY-[A-Z0-9]{8}') &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['paymentStatus', 'bookingStatus', 'paymentId', 'transactionReference', 'updatedAt', 'estimatedDelivery'])) ||
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['paymentStatus', 'paymentMethod', 'bookingStatus', 'paymentId', 'transactionReference', 'updatedAt', 'estimatedDelivery'])) ||
         (role() == 'distributor' && resource.data.distributorId == distributorId() &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deliveryAgentId', 'deliveryAgentName', 'deliveryAgentMobile', 'deliveryAgentVehicleNumber', 'bookingStatus', 'statusTimeline', 'updatedAt']) &&
           (request.resource.data.deliveryAgentId == resource.data.deliveryAgentId ||
@@ -225,7 +233,9 @@ service cloud.firestore {
            (resource.data.bookingStatus == 'processing' && resource.data.deliveryAgentId != '' && request.resource.data.bookingStatus == 'agent_assigned') ||
            request.resource.data.bookingStatus == resource.data.bookingStatus)) ||
         (role() == 'agent' && me().agentId == resource.data.deliveryAgentId &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bookingStatus', 'statusTimeline', 'updatedAt']) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bookingStatus', 'paymentStatus', 'statusTimeline', 'updatedAt']) &&
+          ((resource.data.paymentStatus == 'cod_pending' && request.resource.data.paymentStatus == 'paid' && resource.data.bookingStatus == 'out_for_delivery' && request.resource.data.bookingStatus == 'delivered') ||
+           (resource.data.paymentStatus != 'cod_pending' && request.resource.data.paymentStatus == resource.data.paymentStatus)) &&
           ((resource.data.bookingStatus == 'agent_assigned' && request.resource.data.bookingStatus == 'picked_up') ||
            (resource.data.bookingStatus == 'picked_up' && request.resource.data.bookingStatus == 'out_for_delivery') ||
            (resource.data.bookingStatus == 'out_for_delivery' && request.resource.data.bookingStatus == 'delivered')));

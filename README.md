@@ -1,143 +1,96 @@
-# GasBridge - Fueling Better Homes
+# GasBridge
 
-GasBridge — Online LPG Delivery Management System, a Firebase-powered web app for LPG booking, role-based approval, distributor and delivery-agent management, delivery tracking, and QR-based academic demo payments.
+GasBridge is a responsive LPG cylinder booking and delivery management web application. It connects customers with their authorized distributor and supports booking, payment confirmation, inventory management, delivery assignment, and order tracking.
 
-> **Online LPG Delivery Management System**  
-> *Developed as a Software Engineering Capstone Web Application*
+This project is an academic application. Its QR checkout is a test flow and does not charge real money.
 
-GasBridge is a complete, professional, responsive online LPG cylinder delivery management web application. It connects customers, authorized local distributors, and delivery agents across defined service areas, operating as an independent, modern LPG delivery network.
+## Features
 
----
+- Customer, distributor, delivery agent, and administrator portals.
+- Customer registration with address and pincode based service-area lookup.
+- Domestic and commercial cylinder bookings, up to three cylinders per booking.
+- UPI QR and card test checkout, plus cash on delivery. Online methods are simulated and do not charge money; COD remains due until cash is collected at delivery.
+- Distributor booking management, inventory and delivery-agent assignment.
+- Delivery status updates and customer order tracking.
+- Firebase Authentication and Cloud Firestore in configured live mode, with a local browser storage fallback when Firebase settings are placeholders.
 
-## 🏗️ Core Architecture & Business Flow
+## Roles and main pages
 
-GasBridge models the real-world LPG distribution pipeline:
+| Role | Main pages | Main tasks |
+| --- | --- | --- |
+| Customer | `pages/customer-dashboard.html`, `pages/customer-booking.html`, `pages/customer-bookings.html`, `pages/customer-tracking.html`, `pages/customer-profile.html` | Maintain profile and delivery address, book cylinders, complete test checkout, and follow deliveries. |
+| Distributor | `pages/distributor-dashboard.html`, `pages/distributor-bookings.html`, `pages/distributor-inventory.html`, `pages/distributor-agents.html`, `pages/distributor-customers.html` | Review customers and agents in its service area, manage inventory, and fulfill paid and cash-on-delivery bookings. |
+| Delivery agent | `pages/agent-dashboard.html`, `pages/agent-deliveries.html`, `pages/agent-history.html` | View assigned deliveries, navigate to delivery addresses, and update delivery progress. |
+| Administrator | `pages/admin-dashboard.html`, `pages/admin-customers.html`, `pages/admin-distributors.html`, `pages/admin-agents.html`, `pages/admin-service-areas.html`, `pages/admin-bookings.html`, `pages/admin-inventory.html`, `pages/admin-reports.html` | Oversee users, distributors, service areas, bookings, inventory, and reports. |
 
-```
-CUSTOMER
-    ↓
-FIXED HOME ADDRESS (Saved at Registration)
-    ↓
-PINCODE (e.g. 509216)
-    ↓
-SERVICE AREA (Shadnagar)
-    ↓
-AUTHORIZED DISTRIBUTOR (GasBridge Shadnagar Depot)
-    ↓
-DELIVERY AGENT (Auto-assigned or queued for manual depot assignment)
-    ↓
-LPG DELIVERY & 6-STEP LIVE TRACKING
-```
+Customers select neither their distributor nor delivery agent during booking. The service-area data maps their pincode to a distributor. Distributors manage bookings belonging to their depot and assign approved agents. The normal delivery progression is confirmed, processing, agent assigned, picked up, out for delivery, then delivered.
 
-### Essential Business Rules Enforced:
-1. **Zero Location Picking during Booking**: The customer provides their permanent delivery address once during registration. When booking, their verified address loads automatically.
-2. **Zero Distributor or Agent Choice by Customer**: The system automatically assigns the service area and authorized distributor based on the customer's permanent pincode.
-3. **Unsupported Pincode Gate**: Pincodes outside authorized service areas display `"GasBridge service is currently unavailable in your area."` and prevent invalid bookings.
-4. **Distributor Depot Isolation**: Distributors strictly access bookings belonging to their own authorized service areas.
-5. **Real-time Inventory Check**: Available cylinders are verified at the assigned distributor depot prior to confirming any booking.
-6. **Demo QR Payment with No Banking Credentials**: The academic demo displays a scannable QR with booking details; no real payment or banking credentials are used.
-7. **Unique Booking ID Generation**: Every order receives a formatted tracking ID: `GB-YYYYMMDD-XXXX`.
-8. **15-Minute Inactivity Auto-Logout**: Inactivity monitor tracks user inputs across touch, mouse, and keyboard, expiring the session after 15 minutes of idle time.
+## Checkout and booking lifecycle
 
----
+UPI and card checkout are simulated/test payment experiences; no real payment provider or money transfer is involved. Card checkout accepts only the sample test values shown in the form and does not save card details. The UPI QR link requires the site to be deployed at a reachable URL for use from a phone. Cash-on-delivery bookings are confirmed as orders while payment remains due; the delivery agent records cash collection at handover. An unpaid online checkout that expires or is cancelled is not a fulfilled order.
 
-## 👥 User Roles & Dashboards
+## Interface design
 
-GasBridge provides **4 dedicated role-based portals**:
+The customer booking and checkout flow applies [Shneiderman's Eight Golden Rules](https://www.cs.umd.edu/users/ben/goldenrules.html):
 
-| Role | Portal URL | Core Capabilities |
-|---|---|---|
-| **Customer** | `pages/customer-dashboard.html` | Fixed home address display, 1-click LPG booking, 6-step live tracking, booking history, reordering, profile address editing with pincode re-resolution. |
-| **Distributor** | `pages/distributor-dashboard.html` | Service area bookings monitor, depot inventory gauges, low stock alerts, manual agent assignment, order status progression. |
-| **Delivery Agent** | `pages/agent-dashboard.html` | Assigned delivery queue, 1-click Google Maps navigation, status progression (`Picked Up` → `Out for Delivery` → `Delivered`), completed handover history. |
-| **Administrator** | `pages/admin-dashboard.html` | System-wide KPIs, customer search & activation, distributor depot onboarding, service area & pincode mapping, fleet management, audit logs, printable reports. |
+1. **Consistency:** Reuse the app's shared buttons, status badges, currency format, and plain payment labels.
+2. **Universal usability:** Use responsive layouts, native radio controls, visible labels, and keyboard-operable actions.
+3. **Informative feedback:** Show stock checks, processing states, validation errors, payment status, and order confirmation.
+4. **Clear completion:** End checkout with the booking ID, amount, selected payment method, and next action.
+5. **Prevent errors:** Check stock before checkout, restrict card checkout to sample test data, and distinguish cash due from paid.
+6. **Easy reversal:** Let customers go back between checkout steps or cancel before an order is placed.
+7. **User control:** Let customers choose UPI, card, or cash on delivery and show what each choice does before continuing.
+8. **Reduce memory load:** Keep the cylinder, quantity, total amount, and payment choice together through checkout and in the confirmation.
 
----
+Cylinder prices are configured in `js/firebase-config.js` (currently ₹950 for domestic and ₹1,850 for commercial). Booking IDs use the format `GB-YYYYMMDD-XXXX`.
 
-## 🛠️ Technology Stack
+## Technology
 
-- **Frontend**: Semantic HTML5, Vanilla CSS3 (Custom design system with forest green `#15803d` and energetic orange `#ea580c`), Vanilla JavaScript (ES Modules).
-- **Backend & Database**: Firebase Modular SDK (v10), Cloud Firestore, Firebase Authentication.
-- **Imagery**: Real photographs of LPG cylinders, Indian delivery personnel, Mahindra delivery vans, and household kitchens stored locally in `assets/images/`.
+- HTML, CSS, and vanilla JavaScript ES modules.
+- Firebase JavaScript SDK, Firebase Authentication, and Cloud Firestore.
+- Firebase Hosting configuration in `firebase.json`.
 
----
+## Run locally
 
-## 📂 Project Directory Structure
+Serve the project over HTTP because the application uses JavaScript modules; do not open the HTML files directly with `file://`.
 
-```
-GasBridge/
-├── index.html                           # Landing page
-├── pages/
-│   ├── login.html                       # Role login & quick demo switcher
-│   ├── register.html                    # Customer registration with fixed address
-│   ├── customer-dashboard.html          # Customer central hub
-│   ├── customer-booking.html            # LPG booking & order summary
-│   ├── customer-bookings.html           # Booking history with reorder
-│   ├── customer-tracking.html           # 6-step visual delivery tracker
-│   ├── customer-profile.html            # Profile & address update
-│   ├── distributor-dashboard.html       # Distributor KPIs & alerts
-│   ├── distributor-bookings.html        # Service area order fulfillment
-│   ├── distributor-inventory.html       # Cylinder stock & restock form
-│   ├── distributor-agents.html          # Depot delivery agent roster
-│   ├── agent-dashboard.html             # Agent field overview
-│   ├── agent-deliveries.html            # Active tasks & Google Maps navigation
-│   ├── agent-history.html               # Handover logs
-│   ├── admin-dashboard.html             # System-wide command center
-│   ├── admin-customers.html             # Customer management
-│   ├── admin-distributors.html          # Distributor agency onboarding
-│   ├── admin-service-areas.html         # Service area & pincode binding
-│   ├── admin-agents.html                # Fleet agent onboarding
-│   ├── admin-bookings.html              # Global bookings oversight
-│   ├── admin-inventory.html             # Multi-depot inventory oversight
-│   └── admin-reports.html               # Printable reports & audit log
-├── css/
-│   ├── style.css                        # Design tokens, hero, landing layout
-│   ├── dashboard.css                    # Unified sidebar, tables, cards, stepper
-│   ├── auth.css                         # Split-screen auth and address grids
-│   └── responsive.css                   # Mobile and multi-device breakpoints
-├── js/
-│   ├── firebase-config.js               # Firebase configuration & seed master data
-│   ├── firebase.js                      # Modular SDK initialization & demo bridge
-│   ├── auth.js                          # Session management & 15-min auto logout
-│   ├── firestore.js                     # Firestore database & local fallback store
-│   ├── utils.js                         # Toasts, currency, booking ID generator
-│   ├── customer.js                      # Customer greeting & address card
-│   ├── booking.js                       # Booking calculation & inventory check
-│   ├── payment.js                       # Demo payment modal & last 4 digits
-│   ├── tracking.js                      # Stepper timeline & real-time tracker
-│   ├── distributor.js                   # Distributor order processing
-│   ├── delivery-agent.js                # Agent status updates & navigation
-│   ├── admin.js                         # Admin controls & reports
-│   └── notifications.js                 # In-app notifications
-├── assets/
-│   └── images/                          # High quality realistic LPG imagery
-├── firestore.rules                      # Strict role-based security rules
-├── storage.rules                        # Storage access rules
-├── firebase.json                        # Firebase hosting configuration
-├── README.md                            # Complete project overview
-└── SETUP.md                             # Step-by-step setup guide
-```
-
----
-
-## 🚀 Getting Started
-
-Read [`SETUP.md`](SETUP.md) for full instructions.
-
-### Quick Start with Local Server:
-```bash
-# Using Python
+```sh
 python -m http.server 3000
+```
 
-# Or using Node
+Then open <http://localhost:3000>.
+
+Alternatively, with Node.js installed:
+
+```sh
 npx serve .
 ```
-Then visit `http://localhost:3000` in your web browser.
 
----
+For Firebase configuration, Authentication/Firestore setup, service-area provisioning, and rules deployment, see [`SETUP.md`](SETUP.md).
 
-## 🎓 College Software Engineering Project Alignment
-- **Requirement Analysis**: Strictly follows the authentic Indian LPG distribution workflow.
-- **Modular Design**: Fully segregated CSS and ES6 JavaScript modules with zero framework bloat.
-- **Security Engineering**: 15-minute inactivity session expiration, no plaintext passwords, role-based database policies.
-- **Maintainability**: Easy to read, debug, and edit in Visual Studio Code.
+## Firebase deployment
+
+Install and authenticate the Firebase CLI, select the intended Firebase project, then deploy the resources configured in `firebase.json`:
+
+```sh
+firebase use <project-id>
+firebase deploy --only hosting,firestore:rules,storage
+```
+
+The app's Firebase web configuration is in `js/firebase-config.js`. Configure Firebase Authentication with Email/Password, provision service-area and distributor data, and deploy the included Firestore and Storage rules before using a live Firebase project. Do not replace the security rules with open rules for production.
+
+## Project structure
+
+```text
+.
+├── index.html
+├── pages/                 # Role-specific application pages
+├── css/                   # Shared, dashboard, auth, and responsive styles
+├── js/                    # Auth, Firebase, booking, checkout, and role workflows
+├── assets/images/         # Application imagery
+├── firestore.rules        # Cloud Firestore access controls
+├── storage.rules          # Firebase Storage access controls
+├── firebase.json          # Firebase Hosting and rules configuration
+├── SETUP.md               # Firebase setup and local run instructions
+└── README.md
+```

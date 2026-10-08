@@ -775,7 +775,7 @@ export async function createBooking(bookingData) {
       if (!stock || Number(stock.available || 0) < Number(fullBooking.quantity)) throw new Error('Not enough cylinder stock is available.');
       const paymentRef = doc(db, 'payments', fullBooking.transactionReference);
       tx.update(bookingRef, {
-        paymentStatus: 'paid', bookingStatus: 'confirmed', paymentId: fullBooking.paymentId,
+        paymentStatus: 'paid', paymentMethod: fullBooking.paymentMethod || 'upi_qr', bookingStatus: 'confirmed', paymentId: fullBooking.paymentId,
         transactionReference: fullBooking.transactionReference, updatedAt: fullBooking.updatedAt,
         estimatedDelivery: fullBooking.estimatedDelivery
       });
@@ -784,7 +784,7 @@ export async function createBooking(bookingData) {
         bookingId: fullBooking.bookingId,
         customerId: fullBooking.customerId,
         amount: fullBooking.totalAmount,
-        paymentMethod: 'demo_qr',
+        paymentMethod: fullBooking.paymentMethod || 'upi_qr',
         status: 'success',
         transactionReference: fullBooking.transactionReference,
         createdAt: fullBooking.updatedAt
@@ -915,7 +915,9 @@ export async function getBookings(filter = {}) {
     if (filter.distributorId && b.distributorId !== filter.distributorId) return false;
     if (filter.deliveryAgentId && b.deliveryAgentId !== filter.deliveryAgentId) return false;
     if (filter.status && b.bookingStatus !== filter.status) return false;
-    if (filter.paymentStatus && b.paymentStatus !== filter.paymentStatus) return false;
+    if (filter.paymentStatus && (Array.isArray(filter.paymentStatus)
+      ? !filter.paymentStatus.includes(b.paymentStatus)
+      : b.paymentStatus !== filter.paymentStatus)) return false;
     return true;
   }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
@@ -945,6 +947,34 @@ export async function updateBookingRecord(bookingId, updates) {
   };
 
   if (!persistLocally()) {
+    if (updates.paymentStatus === 'cod_pending') {
+      const bookingRef = doc(db, 'bookings', bookingId);
+      const inventoryRef = doc(db, 'inventory', existing.distributorId);
+      await requireLiveWrite(() => runTransaction(db, async tx => {
+        const [bookingSnap, inventorySnap] = await Promise.all([tx.get(bookingRef), tx.get(inventoryRef)]);
+        if (!bookingSnap.exists() || bookingSnap.data().paymentStatus !== 'unpaid' || bookingSnap.data().bookingStatus !== 'pending_payment') {
+          throw new Error('This booking is no longer awaiting payment.');
+        }
+        if (!inventorySnap.exists()) throw new Error('Distributor inventory is not configured.');
+        const typeKey = (existing.cylinderType || 'domestic').toLowerCase();
+        const stock = inventorySnap.data()[typeKey];
+        if (!stock || Number(stock.available || 0) < Number(existing.quantity)) throw new Error('Not enough cylinder stock is available.');
+        tx.update(bookingRef, cleanUpdates);
+        tx.update(inventoryRef, {
+          [`${typeKey}.available`]: Number(stock.available || 0) - Number(existing.quantity),
+          [`${typeKey}.reserved`]: Number(stock.reserved || 0) + Number(existing.quantity),
+          lastReservation: {
+            bookingId,
+            customerId: existing.customerId,
+            cylinderType: typeKey,
+            quantity: Number(existing.quantity),
+            transactionReference: cleanUpdates.transactionReference || existing.transactionReference || ''
+          },
+          updatedAt: cleanUpdates.updatedAt
+        });
+      }));
+      return { ...existing, ...cleanUpdates };
+    }
     if (Object.prototype.hasOwnProperty.call(updates, 'deliveryAgentId')) {
       if (existing.bookingStatus !== 'processing' || !existing.distributorId) throw new Error('Booking must be processing before agent assignment.');
       const user = await getUserProfile(auth.currentUser?.uid || '');
@@ -962,6 +992,9 @@ export async function updateBookingRecord(bookingId, updates) {
   const bookings = JSON.parse(localStorage.getItem(STORAGE_KEYS.BOOKINGS) || '[]');
   const idx = bookings.findIndex(b => b.bookingId === bookingId);
   if (idx >= 0) {
+    if (updates.paymentStatus === 'cod_pending') {
+      await deductInventoryStock(bookings[idx].distributorId, bookings[idx].cylinderType, bookings[idx].quantity);
+    }
     bookings[idx] = { ...bookings[idx], ...cleanUpdates };
     localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(bookings));
     return bookings[idx];
@@ -1006,6 +1039,9 @@ export async function updateBookingStatus(bookingId, newStatus, note = "", actor
     bookingStatus: newStatus,
     statusTimeline: timeline
   };
+  if (newStatus === 'delivered' && booking.paymentStatus === 'cod_pending') {
+    updates.paymentStatus = 'paid';
+  }
 
   // Delivery agents cannot mutate depot inventory. Distributor/admin completion releases live reservations.
   if (newStatus === 'delivered' && (persistLocally() || actor.role === 'admin')) {
@@ -1073,7 +1109,7 @@ export async function savePaymentRecord(paymentData) {
     bookingId: paymentData.bookingId,
     customerId: paymentData.customerId,
     amount: paymentData.amount,
-    paymentMethod: "demo_qr",
+    paymentMethod: paymentData.paymentMethod || 'upi_qr',
     status: paymentData.status || "success",
     transactionReference: paymentData.transactionReference,
     createdAt: paymentData.createdAt || timestamp

@@ -99,6 +99,7 @@
                   <th>Cylinder Type</th>
                   <th>Quantity</th>
                   <th>Total Amount</th>
+                  <th>Payment</th>
                   <th>Delivery Status</th>
                   <th>Distributor</th>
                   <th>Actions</th>
@@ -106,7 +107,7 @@
               </thead>
               <tbody id="customer-bookings-tbody">
                 <tr>
-                  <td colspan="8" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+                  <td colspan="9" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
                     Loading your bookings...
                   </td>
                 </tr>
@@ -134,7 +135,7 @@
 
       async function loadBookings() {
         const [bookings, distributors] = await Promise.all([
-          getBookings({ customerId: user.uid, paymentStatus: 'paid' }),
+          getBookings({ customerId: user.uid, paymentStatus: ['paid', 'cod_pending'] }),
           getDistributors()
         ]);
 
@@ -142,7 +143,7 @@
         if (bookings.length === 0) {
           tbody.innerHTML = `
             <tr>
-              <td colspan="8" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+              <td colspan="9" style="text-align: center; padding: 3rem; color: var(--text-muted);">
                 <p style="margin-bottom: 1rem;">You have not placed any bookings yet.</p>
                 <a href="customer-booking.html" class="btn btn-primary btn-sm">Place First Booking</a>
               </td>
@@ -160,6 +161,7 @@
               <td>${escapeHTML(b.cylinderName || 'Domestic LPG')}</td>
               <td><strong>${b.quantity}</strong></td>
               <td><strong>${formatCurrency(b.totalAmount)}</strong></td>
+              <td>${getStatusBadgeHTML(b.paymentStatus)}</td>
               <td>${getStatusBadgeHTML(b.bookingStatus)}</td>
               <td style="font-size: 0.85rem;">${escapeHTML(dist ? dist.name : 'Authorized Distributor')}</td>
               <td>

@@ -88,6 +88,7 @@ export function getStatusBadgeHTML(status) {
     delivered: { label: 'Delivered', class: 'badge-success' },
     cancelled: { label: 'Cancelled', class: 'badge-danger' },
     paid: { label: 'Paid', class: 'badge-success' },
+    cod_pending: { label: 'Cash due on delivery', class: 'badge-warning' },
     pending: { label: 'Pending', class: 'badge-warning' },
     failed: { label: 'Failed', class: 'badge-danger' }
   };

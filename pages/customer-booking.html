@@ -10,6 +10,11 @@
   <link rel="stylesheet" href="../css/dashboard.css">
   <link rel="stylesheet" href="../css/responsive.css">
   <style>
+    .payment-method-option { display: flex; align-items: center; gap: .55rem; min-height: 58px; padding: .65rem .75rem; border: 1px solid var(--border); border-radius: var(--radius-md); cursor: pointer; }
+    .payment-method-option:has(input:checked) { border-color: var(--primary); background: #f0fdf4; box-shadow: 0 0 0 1px var(--primary); }
+    .payment-method-option input { accent-color: var(--primary); }
+    .payment-method-option span { display: grid; gap: .1rem; }
+    .payment-method-option small { color: var(--text-muted); font-size: .75rem; }
     .registered-connection-card {
       border: 2px solid var(--primary);
       background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
@@ -201,8 +206,17 @@
               </div>
             </div>
 
+            <fieldset class="payment-method-picker" style="border: 0; padding: 0; margin: 0 0 1.25rem;">
+              <legend style="font-weight: 700; margin-bottom: 0.6rem;">Payment method</legend>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.65rem;">
+                <label class="payment-method-option"><input type="radio" name="payment-method" value="upi_qr" checked><span><strong>UPI</strong><small>Scan QR code</small></span></label>
+                <label class="payment-method-option"><input type="radio" name="payment-method" value="card"><span><strong>Card</strong><small>Credit or debit</small></span></label>
+                <label class="payment-method-option"><input type="radio" name="payment-method" value="cod"><span><strong>Cash on delivery</strong><small>Pay when delivered</small></span></label>
+              </div>
+            </fieldset>
+            <p id="payment-method-hint" aria-live="polite" style="font-size: 0.82rem; color: var(--text-muted); margin: 0 0 1rem;">UPI checkout uses a QR code. This project runs test payments only; no real money is charged.</p>
             <button type="button" class="btn btn-primary btn-full btn-lg" id="proceed-to-payment-btn">
-              Proceed to Demo Payment &rarr;
+              Continue to payment &rarr;
             </button>
           </div>
         </div>

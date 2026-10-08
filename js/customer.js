@@ -52,7 +52,7 @@ export async function initCustomerDashboard() {
   if (distEl) distEl.textContent = profile.distributorName || "Authorized GasBridge Distributor";
 
   // 4. Load Active/Latest Booking
-  const customerBookings = await getBookings({ customerId: user.uid, paymentStatus: 'paid' });
+  const customerBookings = await getBookings({ customerId: user.uid, paymentStatus: ['paid', 'cod_pending'] });
   const activeBooking = customerBookings.find(b => b.bookingStatus !== 'delivered' && b.bookingStatus !== 'cancelled') || customerBookings[0];
 
   const currentOrderCard = document.getElementById('current-order-card');
@@ -96,7 +96,7 @@ export async function initCustomerDashboard() {
     if (customerBookings.length === 0) {
       recentTableBody.innerHTML = `
         <tr>
-          <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+          <td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-muted);">
             You haven't made any LPG bookings yet.
           </td>
         </tr>
@@ -108,6 +108,7 @@ export async function initCustomerDashboard() {
           <td>${formatDateTime(b.createdAt)}</td>
           <td>${escapeHTML(b.cylinderName || 'Domestic LPG')} (${b.quantity})</td>
           <td><strong>${formatCurrency(b.totalAmount)}</strong></td>
+          <td>${getStatusBadgeHTML(b.paymentStatus)}</td>
           <td>${getStatusBadgeHTML(b.bookingStatus)}</td>
           <td>
             <div class="flex gap-1">

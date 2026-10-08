@@ -161,14 +161,14 @@ function renderDeliveryCard(booking) {
 
         <!-- Status Progress Action Buttons -->
         <div class="flex gap-1" style="flex-wrap: wrap;">
-          ${renderActionButtonsForStatus(booking.bookingId, booking.bookingStatus)}
+          ${renderActionButtonsForStatus(booking.bookingId, booking.bookingStatus, booking.paymentStatus)}
         </div>
       </div>
     </div>
   `;
 }
 
-function renderActionButtonsForStatus(bookingId, status) {
+function renderActionButtonsForStatus(bookingId, status, paymentStatus) {
   if (status === 'agent_assigned') {
     return `
       <button class="btn btn-outline btn-sm agent-action-btn" data-id="${bookingId}" data-next="picked_up">
@@ -185,7 +185,7 @@ function renderActionButtonsForStatus(bookingId, status) {
   }
   if (status === 'out_for_delivery') {
     return `
-      <button class="btn btn-primary btn-sm agent-action-btn" data-id="${bookingId}" data-next="delivered">
+      <button class="btn btn-primary btn-sm agent-action-btn" data-id="${bookingId}" data-next="delivered" data-cod="${paymentStatus === 'cod_pending'}">
         ✓ Confirm Handover (Mark Delivered)
       </button>
     `;
@@ -198,6 +198,7 @@ function attachAgentActionListeners(container, user) {
     btn.addEventListener('click', async () => {
       const bId = btn.dataset.id;
       const nextStatus = btn.dataset.next;
+      if (nextStatus === 'delivered' && btn.dataset.cod === 'true' && !window.confirm('Confirm that you collected the cash payment from the customer?')) return;
 
       btn.disabled = true;
       btn.textContent = "Updating...";
