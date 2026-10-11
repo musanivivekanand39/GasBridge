@@ -214,8 +214,15 @@
         const pendingBadge = document.getElementById('pending-count-badge');
         const activeBadge = document.getElementById('active-count-badge');
 
-        const pendingList = distributors.filter(d => d.approvalStatus === 'pending' || (!d.active && d.approvalStatus !== 'rejected'));
-        const activeList = distributors.filter(d => d.approvalStatus === 'approved' || (d.active && d.approvalStatus !== 'rejected'));
+        const approvalState = record => {
+          const states = [record.status, record.approvalStatus].map(value => String(value || '').toLowerCase());
+          if (states.includes('rejected')) return 'rejected';
+          if (states.includes('pending')) return 'pending';
+          if (states.includes('approved')) return 'approved';
+          return '';
+        };
+        const pendingList = distributors.filter(d => approvalState(d) === 'pending' || (!d.active && !approvalState(d)));
+        const activeList = distributors.filter(d => approvalState(d) === 'approved' || (d.active && !approvalState(d)));
 
         if (pendingBadge) pendingBadge.textContent = `${pendingList.length} Pending`;
         if (activeBadge) activeBadge.textContent = `${activeList.length} Active`;

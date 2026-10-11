@@ -41,9 +41,14 @@ export async function initAdminDashboard() {
   ]);
 
   // Set KPIs
-  const activeDistributors = distributors.filter(d => d.approvalStatus === 'approved' || (d.active && d.approvalStatus !== 'rejected'));
-  const activeCustomers = customers.filter(c => c.approvalStatus === 'approved' || (c.active && c.approvalStatus !== 'rejected'));
-  const activeAgents = agents.filter(a => a.approvalStatus === 'approved' || (a.active && a.approvalStatus !== 'rejected'));
+  const notRejected = record => ![record.status, record.approvalStatus]
+    .some(value => String(value || '').toLowerCase() === 'rejected');
+  const activeDistributors = distributors.filter(d => notRejected(d) &&
+    (d.status === 'approved' || d.approvalStatus === 'approved' || d.active === true));
+  const activeCustomers = customers.filter(c => notRejected(c) &&
+    (c.status === 'approved' || c.approvalStatus === 'approved' || c.active === true));
+  const activeAgents = agents.filter(a => notRejected(a) &&
+    (a.status === 'approved' || a.approvalStatus === 'approved' || a.active === true));
 
   setVal('kpi-total-customers', activeCustomers.length);
   setVal('kpi-total-distributors', activeDistributors.length);
@@ -230,8 +235,14 @@ export async function initAdminCustomersPage() {
 
   async function loadAndRender() {
     const customers = await getAllCustomers();
-    const pendingList = customers.filter(c => c.status === 'pending' || c.approvalStatus === 'pending');
-    const activeList = customers.filter(c => c.status === 'approved' || c.approvalStatus === 'approved');
+    const pendingList = customers.filter(c =>
+      ![c.status, c.approvalStatus].some(value => String(value || '').toLowerCase() === 'rejected') &&
+      (c.status === 'pending' || c.approvalStatus === 'pending')
+    );
+    const activeList = customers.filter(c =>
+      ![c.status, c.approvalStatus].some(value => String(value || '').toLowerCase() === 'rejected') &&
+      (c.status === 'approved' || c.approvalStatus === 'approved' || c.active === true)
+    );
 
     if (pendingBadge) pendingBadge.textContent = `${pendingList.length} Pending`;
 

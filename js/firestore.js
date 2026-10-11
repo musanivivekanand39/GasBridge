@@ -49,6 +49,15 @@ const STORAGE_KEYS = {
 const PAGE_CACHE_PREFIX = 'gasbridge_page_data_v1:';
 const pendingPageReads = new Map();
 
+function approvalState(record = {}) {
+  const states = [record.status, record.approvalStatus]
+    .map(value => String(value || '').toLowerCase());
+  if (states.includes('rejected')) return 'rejected';
+  if (states.includes('pending')) return 'pending';
+  if (states.includes('approved')) return 'approved';
+  return states.find(Boolean) || 'pending';
+}
+
 function pageCacheScope() {
   if (auth?.currentUser?.uid) return auth.currentUser.uid;
   try {
@@ -367,6 +376,7 @@ export async function getUserProfile(uid) {
 
 export async function saveCustomerProfile(profileData) {
   const timestamp = new Date().toISOString();
+  const currentApprovalState = approvalState(profileData);
   const cleanProfile = {
     userId: profileData.userId || profileData.uid,
     uid: profileData.userId || profileData.uid,
@@ -380,9 +390,9 @@ export async function saveCustomerProfile(profileData) {
     distributorId: profileData.distributorId || '',
     distributorName: profileData.distributorName || '',
     cylinderType: profileData.cylinderType || 'domestic',
-    status: profileData.status || profileData.approvalStatus || 'pending',
-    approvalStatus: profileData.status || profileData.approvalStatus || 'pending',
-    active: profileData.active === true || profileData.status === 'approved' || profileData.approvalStatus === 'approved',
+    status: currentApprovalState,
+    approvalStatus: currentApprovalState,
+    active: currentApprovalState === 'approved' && profileData.active !== false,
     createdAt: profileData.createdAt || timestamp,
     updatedAt: timestamp
   };
@@ -465,6 +475,7 @@ export async function saveCustomerProfile(profileData) {
 
 export async function saveDistributor(distData) {
   const timestamp = new Date().toISOString();
+  const currentApprovalState = approvalState(distData);
   const normalizedPincodes = normalizePincodeValues(distData.pincodes);
   const primaryPincode = normalizedPincodes[0] || normalizePincodeValues(distData.pincode)[0] || '';
   const storedPincodes = normalizedPincodes.length ? normalizedPincodes : primaryPincode ? [primaryPincode] : [];
@@ -483,9 +494,9 @@ export async function saveDistributor(distData) {
     pincodes: storedPincodes,
     serviceAreaId: distData.serviceAreaId || '',
     serviceAreaIds: distData.serviceAreaIds || [],
-    status: distData.status || distData.approvalStatus || 'pending',
-    approvalStatus: distData.status || distData.approvalStatus || 'pending',
-    active: distData.active === true || distData.status === 'approved' || distData.approvalStatus === 'approved',
+    status: currentApprovalState,
+    approvalStatus: currentApprovalState,
+    active: currentApprovalState === 'approved' && distData.active !== false,
     createdAt: distData.createdAt || timestamp,
     updatedAt: timestamp
   };
@@ -550,6 +561,7 @@ export async function saveDistributor(distData) {
 
 export async function saveDeliveryAgent(agentData) {
   const timestamp = new Date().toISOString();
+  const currentApprovalState = approvalState(agentData);
   const cleanAgent = {
     id: agentData.id,
     userId: agentData.userId || agentData.id,
@@ -562,10 +574,10 @@ export async function saveDeliveryAgent(agentData) {
     vehicleType: agentData.vehicleType || '',
     vehicleNumber: agentData.vehicleNumber || '',
     distributorId: agentData.distributorId || '',
-    status: agentData.status || agentData.approvalStatus || 'pending',
-    approvalStatus: agentData.status || agentData.approvalStatus || 'pending',
+    status: currentApprovalState,
+    approvalStatus: currentApprovalState,
     dutyStatus: agentData.dutyStatus || 'offline',
-    active: agentData.active === true || agentData.status === 'approved' || agentData.approvalStatus === 'approved',
+    active: currentApprovalState === 'approved' && agentData.active !== false,
     createdAt: agentData.createdAt || timestamp,
     updatedAt: timestamp
   };
@@ -1542,7 +1554,7 @@ export async function rejectDistributor(distributorId, reason = "Registration ve
 
 export async function getPendingDistributors() {
   const dists = await getDistributors();
-  return dists.filter(d => d.status === "pending" || d.approvalStatus === "pending");
+  return dists.filter(d => approvalState(d) === 'pending');
 }
 
 // --------------------------------------------------------------------------
@@ -1635,7 +1647,7 @@ export async function getPendingDistributorCustomers(distributorId = null) {
     custs = await getAllCustomers();
   }
   return custs.filter(c => {
-    const isPending = c.status === "pending" || c.approvalStatus === "pending";
+    const isPending = approvalState(c) === 'pending';
     if (!isPending) return false;
     if (distributorId) return c.distributorId === distributorId;
     return true;
