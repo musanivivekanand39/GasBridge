@@ -549,6 +549,18 @@
   white-space: normal !important;
 }
 
+.admin-active-distributors-table th:last-child,
+.admin-active-distributors-table td:last-child {
+  text-align: center;
+}
+
+.admin-active-distributors-table td:last-child .badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
 .dashboard-two-column-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
