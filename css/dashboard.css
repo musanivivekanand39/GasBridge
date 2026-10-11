@@ -561,7 +561,8 @@
   width: fit-content;
   max-width: 100%;
   margin: 0 auto;
-  overflow-wrap: anywhere;
+  word-break: normal;
+  overflow-wrap: normal;
 }
 
 .data-table td > .badge:only-child:not(.table-status-badge) {
@@ -570,7 +571,8 @@
   max-width: 100%;
   margin-inline: auto;
   place-items: center;
-  overflow-wrap: anywhere;
+  word-break: normal;
+  overflow-wrap: normal;
   text-align: center;
   white-space: normal;
 }
