@@ -518,6 +518,13 @@
 }
 
 /* Delivery Tracking Stepper */
+.tracking-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+  align-items: start;
+  gap: 1.75rem;
+}
+
 .tracking-stepper {
   display: flex;
   justify-content: space-between;

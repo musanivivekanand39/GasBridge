@@ -4,6 +4,10 @@
 
 /* Laptop & Medium Screens (max-width: 1024px) */
 @media (max-width: 1024px) {
+  .tracking-layout {
+    grid-template-columns: 1fr;
+  }
+
   .hero-grid {
     grid-template-columns: 1fr;
     gap: 2.5rem;

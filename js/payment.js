@@ -160,7 +160,7 @@ function ensurePaymentModalExists() {
               <span><strong>UPI</strong><small style="display:block;color:var(--text-muted);font-weight:400;">Scan a QR code · simulated payment</small></span><span aria-hidden="true">›</span>
             </button>
             <button type="button" class="btn btn-outline" data-payment-method-choice="card" style="display:flex;justify-content:space-between;align-items:center;text-align:left;padding:.9rem 1rem;">
-              <span><strong>Credit or debit card</strong><small style="display:block;color:var(--text-muted);font-weight:400;">Use the sample card details · simulated payment</small></span><span aria-hidden="true">›</span>
+              <span><strong>Credit or debit card</strong><small style="display:block;color:var(--text-muted);font-weight:400;">Complete a simulated card payment</small></span><span aria-hidden="true">›</span>
             </button>
             <button type="button" class="btn btn-outline" data-payment-method-choice="cod" style="display:flex;justify-content:space-between;align-items:center;text-align:left;padding:.9rem 1rem;">
               <span><strong>Cash on delivery</strong><small style="display:block;color:var(--text-muted);font-weight:400;">Pay the delivery agent when your order arrives</small></span><span aria-hidden="true">›</span>
@@ -170,18 +170,9 @@ function ensurePaymentModalExists() {
         </div>
         <div id="payment-view-card" style="display:none;">
           <h3 style="margin:0 0 .4rem;">Pay by card</h3>
-          <p style="color:var(--text-muted);font-size:.85rem;">Simulation only. Use the sample values shown below; never enter a real card.</p>
-          <form id="test-card-form" novalidate>
-            <label for="test-card-number">Credit or debit card number</label>
-            <input class="form-control" id="test-card-number" inputmode="numeric" autocomplete="off" value="4242 4242 4242 4242" required aria-describedby="test-card-help">
-            <small id="test-card-help" style="display:block;color:var(--text-muted);margin:.3rem 0 .8rem;">Sample details: 4242 4242 4242 4242 · expiry: 12/30 · security code: 123. Do not enter real card details.</small>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
-              <div><label for="test-card-expiry">Expiry</label><input class="form-control" id="test-card-expiry" placeholder="MM/YY" value="12/30" required></div>
-              <div><label for="test-card-cvv">Security code</label><input class="form-control" id="test-card-cvv" inputmode="numeric" autocomplete="off" value="123" maxlength="4" required></div>
-            </div>
-            <p style="margin:.9rem 0;font-weight:700;">Amount: <span id="card-pay-amount"></span></p>
-            <div style="display:flex;gap:.65rem;"><button class="btn btn-outline" type="button" id="btn-card-back">Back to booking</button><button class="btn btn-primary" type="submit" id="btn-card-pay" style="flex:1;">Pay</button></div>
-          </form>
+          <p style="color:var(--text-muted);font-size:.88rem;">This is a simulated payment. No card details are needed, and no money will be charged.</p>
+          <p style="margin:.9rem 0;font-weight:700;">Amount: <span id="card-pay-amount"></span></p>
+          <div style="display:flex;gap:.65rem;"><button class="btn btn-outline" type="button" id="btn-card-back">Back to booking</button><button class="btn btn-primary" type="button" id="btn-card-pay" style="flex:1;">Complete simulated payment</button></div>
         </div>
         <div id="payment-view-cod" style="display:none;text-align:center;padding:1rem 0;">
           <div style="font-size:2rem;">💵</div><h3>Cash on delivery</h3>
@@ -377,17 +368,7 @@ function ensurePaymentModalExists() {
       }
     });
   });
-  modal.querySelector('#test-card-form').addEventListener('submit', event => {
-    event.preventDefault();
-    const number = modal.querySelector('#test-card-number').value.replace(/\s/g, '');
-    const expiry = modal.querySelector('#test-card-expiry').value.trim();
-    const cvv = modal.querySelector('#test-card-cvv').value.trim();
-    if (number !== '4242424242424242' || expiry !== '12/30' || cvv !== '123') {
-      event.currentTarget.reset();
-      showToast('Card details not accepted', 'Use the sample values displayed on this form.', 'error');
-      return;
-    }
-    event.currentTarget.reset();
+  modal.querySelector('#btn-card-pay').addEventListener('click', () => {
     const payButton = modal.querySelector('#btn-card-pay');
     payButton.disabled = true;
     payButton.textContent = 'Processing…';
@@ -402,7 +383,6 @@ function closeModalHandler() {
   void cancelPendingBooking('Checkout was closed before payment confirmation.');
   const modal = document.getElementById('payment-modal');
   if (modal) {
-    modal.querySelector('#test-card-form')?.reset();
     modal.classList.remove('active');
     document.body.style.overflow = '';
   }
@@ -462,7 +442,7 @@ async function beginSelectedPayment(paymentMethod) {
   const modal = ensurePaymentModalExists();
   const methodText = {
     upi_qr: ['Scan the QR code with your UPI app', 'Simulated payment · No real charge will be made'],
-    card: ['Use the sample card details', 'Card simulation · Do not enter real card details'],
+    card: ['Complete the card simulation', 'Simulated payment · No card details or money are collected'],
     cod: ['Pay cash when the delivery arrives', 'No online payment · Cash due at delivery']
   }[context.paymentMethod] || ['Scan the QR code with your UPI app', 'Simulated payment · No real charge will be made'];
   modal.querySelector('#payment-header-hint').textContent = methodText[0];
@@ -762,7 +742,11 @@ async function handlePaymentSuccess() {
       transactionReference: currentTransactionRef,
       bookingStatus: "confirmed",
       updatedAt: nowIso,
-      estimatedDelivery: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0]
+      estimatedDelivery: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
+      statusTimeline: [
+        ...(Array.isArray(latestBooking.statusTimeline) ? latestBooking.statusTimeline : []),
+        { status: 'confirmed', time: nowIso, note: `${paymentMethodLabel(activeOrderContext.paymentMethod)} payment confirmed.` }
+      ]
     };
 
     paymentStep = 'saving the payment, confirming the booking, and reserving stock';

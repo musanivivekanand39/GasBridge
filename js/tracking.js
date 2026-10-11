@@ -118,14 +118,21 @@ async function loadAndRenderTracking(bookingId, isSilentRefresh = false) {
 
   // 4. Render Timeline Events
   const timelineEl = document.getElementById('track-timeline-list');
-  if (timelineEl && booking.statusTimeline) {
-    timelineEl.innerHTML = booking.statusTimeline.map(item => `
+  if (timelineEl) {
+    const timeline = Array.isArray(booking.statusTimeline) && booking.statusTimeline.length
+      ? booking.statusTimeline
+      : [{
+          status: booking.bookingStatus || 'confirmed',
+          time: booking.updatedAt || booking.createdAt,
+          note: 'Current order status. New milestones will appear as the distributor and delivery agent update the booking.'
+        }];
+    timelineEl.innerHTML = timeline.map(item => `
       <div style="display: flex; gap: 1rem; margin-bottom: 1.25rem; position: relative;">
         <div style="width: 10px; height: 10px; border-radius: 50%; background: var(--primary); margin-top: 6px; flex-shrink: 0; box-shadow: 0 0 0 4px var(--primary-light);"></div>
         <div>
-          <strong style="text-transform: capitalize; font-size: 0.92rem; display: block;">${escapeHTML(item.status.replace(/_/g, ' '))}</strong>
-          <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0.15rem 0;">${escapeHTML(item.note)}</p>
-          <span style="font-size: 0.75rem; color: var(--text-light);">${formatDateTime(item.time)}</span>
+          <strong style="text-transform: capitalize; font-size: 0.92rem; display: block;">${escapeHTML((item.status || booking.bookingStatus || 'confirmed').replace(/_/g, ' '))}</strong>
+          <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0.15rem 0;">${escapeHTML(item.note || 'Order status updated.')}</p>
+          ${item.time ? `<span style="font-size: 0.75rem; color: var(--text-light);">${formatDateTime(item.time)}</span>` : ''}
         </div>
       </div>
     `).join('');
