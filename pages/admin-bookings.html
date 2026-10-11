@@ -183,10 +183,18 @@
           tbody.querySelectorAll('.cancel-booking-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
               const bId = btn.dataset.id;
-              if (confirm(`Are you sure you want to cancel booking ${bId}?`)) {
+              if (!confirm(`Are you sure you want to cancel booking ${bId}?`)) return;
+
+              btn.disabled = true;
+              btn.textContent = 'Cancelling...';
+              try {
                 await updateBookingStatus(bId, 'cancelled', "Cancelled by System Administrator", { id: user.uid, role: 'admin' });
                 showToast("Booking Cancelled", `Booking ${bId} marked as cancelled.`, "info");
-                loadBookings();
+                await loadBookings();
+              } catch (error) {
+                showToast("Cancellation Failed", error.message || `Booking ${bId} could not be cancelled.`, "error");
+                btn.disabled = false;
+                btn.textContent = 'Cancel';
               }
             });
           });
@@ -194,7 +202,7 @@
 
         renderRows(bookings);
 
-        searchInput.addEventListener('input', (e) => {
+        searchInput.oninput = (e) => {
           const q = e.target.value.toLowerCase();
           const filtered = bookings.filter(b => 
             b.bookingId.toLowerCase().includes(q) || 
@@ -202,7 +210,7 @@
             b.deliveryAddress.city.toLowerCase().includes(q)
           );
           renderRows(filtered);
-        });
+        };
       }
 
       loadBookings();

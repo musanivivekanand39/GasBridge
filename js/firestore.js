@@ -345,7 +345,7 @@ export async function getCustomerProfile(customerId) {
         const docRef = doc(db, "customers", customerId);
         const snap = await getDoc(docRef);
         if (snap.exists()) {
-          return { uid: snap.id, ...snap.data() };
+          return { ...snap.data(), uid: snap.id };
         }
         return null;
       } catch (e) {
@@ -471,6 +471,29 @@ export async function saveCustomerProfile(profileData) {
 
   invalidatePageDataCache();
   return cleanProfile;
+}
+
+export async function deleteCustomerAccount(customerId) {
+  if (!customerId) throw new Error('Customer account ID is missing.');
+  if (!persistLocally() && !(await hasAdminAccess())) {
+    throw new Error('Only the administrator can delete customer accounts.');
+  }
+
+  if (!persistLocally()) {
+    const batch = writeBatch(db);
+    batch.delete(doc(db, 'customers', customerId));
+    batch.delete(doc(db, 'users', customerId));
+    await batch.commit();
+  } else {
+    const customers = JSON.parse(localStorage.getItem(STORAGE_KEYS.CUSTOMERS) || '[]')
+      .filter(customer => customer.uid !== customerId && customer.userId !== customerId && customer.id !== customerId);
+    const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]')
+      .filter(user => user.uid !== customerId);
+    localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(customers));
+    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+  }
+
+  invalidatePageDataCache();
 }
 
 export async function saveDistributor(distData) {
@@ -1110,7 +1133,9 @@ export async function updateBookingStatus(bookingId, newStatus, note = "", actor
     picked_up: ['out_for_delivery'],
     out_for_delivery: ['delivered']
   };
-  if (!transitions[booking.bookingStatus]?.includes(newStatus)) {
+  const adminCancellation = actor.role === 'admin' && newStatus === 'cancelled' &&
+    !['delivered', 'cancelled'].includes(booking.bookingStatus);
+  if (!transitions[booking.bookingStatus]?.includes(newStatus) && !adminCancellation) {
     throw new Error(`Invalid booking status transition: ${booking.bookingStatus} → ${newStatus}.`);
   }
   if (actor.role === 'agent' && !['picked_up', 'out_for_delivery', 'delivered'].includes(newStatus)) {
@@ -1138,13 +1163,19 @@ export async function updateBookingStatus(bookingId, newStatus, note = "", actor
     updates.paymentStatus = 'paid';
   }
 
+  // Release reserved stock when an admin cancels an already-confirmed order.
+  const shouldReleaseReservation = adminCancellation && ['paid', 'cod_pending'].includes(booking.paymentStatus) &&
+    ['confirmed', 'processing', 'agent_assigned', 'picked_up', 'out_for_delivery'].includes(booking.bookingStatus);
+  const inventoryTypeKey = (booking.cylinderType || 'domestic').toLowerCase();
+  let releasedInventory = null;
   // Delivery agents cannot mutate depot inventory. Distributor/admin completion releases live reservations.
-  if (newStatus === 'delivered' && (persistLocally() || actor.role === 'admin')) {
+  if ((newStatus === 'delivered' && (persistLocally() || actor.role === 'admin')) || shouldReleaseReservation) {
     const inv = await getDistributorInventory(booking.distributorId);
-    const typeKey = (booking.cylinderType || 'domestic').toLowerCase();
-    if (inv[typeKey]) {
-      inv[typeKey].reserved = Math.max(0, (inv[typeKey].reserved || 0) - booking.quantity);
+    if (inv[inventoryTypeKey]) {
+      inv[inventoryTypeKey].reserved = Math.max(0, (inv[inventoryTypeKey].reserved || 0) - booking.quantity);
+      if (shouldReleaseReservation) inv[inventoryTypeKey].available = (inv[inventoryTypeKey].available || 0) + booking.quantity;
       await updateDistributorInventory(booking.distributorId, inv);
+      if (shouldReleaseReservation) releasedInventory = inv;
     }
   }
 
@@ -1152,7 +1183,11 @@ export async function updateBookingStatus(bookingId, newStatus, note = "", actor
   try {
     updated = await updateBookingRecord(bookingId, updates);
   } catch (error) {
-    if (newStatus === 'delivered' && persistLocally()) {
+    if (releasedInventory?.[inventoryTypeKey]) {
+      releasedInventory[inventoryTypeKey].available = Math.max(0, (releasedInventory[inventoryTypeKey].available || 0) - booking.quantity);
+      releasedInventory[inventoryTypeKey].reserved = (releasedInventory[inventoryTypeKey].reserved || 0) + booking.quantity;
+      await updateDistributorInventory(booking.distributorId, releasedInventory);
+    } else if (newStatus === 'delivered' && persistLocally()) {
       const inv = await getDistributorInventory(booking.distributorId);
       const typeKey = (booking.cylinderType || 'domestic').toLowerCase();
       if (inv[typeKey]) {
@@ -1387,7 +1422,7 @@ export async function getAllCustomers() {
       try {
         if (!(await hasAdminAccess())) return [];
         const snap = await getDocs(collection(db, "customers"));
-        return snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+        return snap.docs.map(d => ({ ...d.data(), uid: d.id }));
       } catch (e) { throw e; }
     }
     if (!persistLocally()) return [];
@@ -1641,7 +1676,7 @@ export async function getPendingDistributorCustomers(distributorId = null) {
   if (!persistLocally() && distributorId) {
     custs = await cachedPageData(`customers:distributor:${distributorId}`, async () => {
       const snap = await getDocs(query(collection(db, 'customers'), where('distributorId', '==', distributorId)));
-      return snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+      return snap.docs.map(d => ({ ...d.data(), uid: d.id }));
     }, 60000);
   } else {
     custs = await getAllCustomers();
@@ -1659,7 +1694,7 @@ export async function getDistributorCustomers(distributorId = null) {
   if (!persistLocally() && distributorId) {
     custs = await cachedPageData(`customers:distributor:${distributorId}`, async () => {
       const snap = await getDocs(query(collection(db, 'customers'), where('distributorId', '==', distributorId)));
-      return snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+      return snap.docs.map(d => ({ ...d.data(), uid: d.id }));
     }, 60000);
   } else {
     custs = await getAllCustomers();

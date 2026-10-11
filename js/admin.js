@@ -7,6 +7,7 @@
 import { getCurrentUser } from "./auth.js";
 import { 
   getAllCustomers, 
+  deleteCustomerAccount,
   getDistributors, 
   getServiceAreas, 
   getDeliveryAgents, 
@@ -301,22 +302,28 @@ export async function initAdminCustomersPage() {
           <td><span class="badge badge-info">${escapeHTML(c.address ? c.address.pincode : '')}</span></td>
           <td><span class="badge table-status-badge ${c.active ? 'badge-success' : 'badge-danger'}">${c.active ? 'Active & Approved' : 'Inactive'}</span></td>
           <td>
-            <button class="btn btn-outline btn-sm toggle-cust-btn" data-id="${c.uid}">
-              ${c.active ? 'Deactivate' : 'Activate'}
+            <button class="btn btn-outline-danger btn-sm delete-cust-btn" data-id="${escapeHTML(c.uid || c.userId || c.id)}">
+              Delete Account
             </button>
           </td>
         </tr>
       `).join('');
 
-      tbody.querySelectorAll('.toggle-cust-btn').forEach(btn => {
+      tbody.querySelectorAll('.delete-cust-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           const id = btn.dataset.id;
-          const target = customers.find(x => x.uid === id);
-          if (target) {
-            target.active = !target.active;
-            localStorage.setItem('gasbridge_demo_customers', JSON.stringify(customers));
-            showToast("Status Updated", `Customer account ${target.name} has been ${target.active ? 'activated' : 'deactivated'}.`, "info");
+          const target = customers.find(x => (x.uid || x.userId || x.id) === id);
+          if (!target || !confirm(`Permanently delete ${target.name || 'this customer'}'s account? Their customer profile and user record will be removed.`)) return;
+          btn.disabled = true;
+          btn.textContent = 'Deleting...';
+          try {
+            await deleteCustomerAccount(id);
+            showToast('Customer Account Deleted', `${target.name || 'Customer'} was removed from the customer directory.`, 'success');
             await loadAndRender();
+          } catch (error) {
+            showToast('Delete Failed', error.message || 'Could not delete this customer account.', 'error');
+            btn.disabled = false;
+            btn.textContent = 'Delete Account';
           }
         });
       });
