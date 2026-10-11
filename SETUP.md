@@ -123,7 +123,7 @@ Because GasBridge uses official ES Modules (`import/export`) for the Firebase Mo
 ## 🧪 Quick Test Checklist
 - **Customer Registration**: Register with pincode `509216` → confirms Shadnagar Service Area.
 - **Unsupported Pincode**: Test with `110001` → shows service unavailable notice.
-- **Booking Flow**: Book 1 Domestic LPG cylinder → check inventory → Demo Payment → get `GB-YYYYMMDD-XXXX` ID.
+- **Booking Flow**: Book 1 Domestic LPG cylinder → check inventory → complete the payment simulation → get a `GB-YYYYMMDD-XXXX` ID.
 - **Distributor Depot**: View bookings filtered to Shadnagar → assign delivery agent.
 - **Delivery Agent**: View assigned delivery → click "Navigate" (Google Maps) → mark as Out for Delivery → Delivered.
 - **Customer Live Tracking**: Stepper advances through all 6 milestones.

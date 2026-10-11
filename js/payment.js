@@ -1,9 +1,9 @@
 /**
- * GasBridge - Simulated Payment Processing Module
- * Card and UPI paths are test flows only; COD creates an unpaid order.
+ * GasBridge - Checkout Module
+ * UPI and card are simulated; COD remains payable on delivery.
  * 2. Scannable QR link with one-time cross-device confirmation for the current booking.
  * 3. Forty-second confirmation window, followed by redirect to LPG booking.
- * 4. Offline demo mode retains a manual simulated confirmation flow.
+ * 4. Local preview mode retains a manual simulated confirmation flow.
  * 5. Payment duplicate protection.
  * 6. Never persists card credentials.
  */
@@ -88,7 +88,7 @@ async function cancelPendingBooking(reason) {
 
 async function failExpiredPayment() {
   stopPaymentWindow();
-  const modal = document.getElementById('demo-payment-modal');
+  const modal = document.getElementById('payment-modal');
   if (modal) {
     modal.querySelector('#payment-failure-message').textContent = 'The payment request expired. No charge was made. Returning to LPG booking…';
     modal.querySelector('#btn-retry-payment').style.display = 'none';
@@ -121,16 +121,16 @@ function startPaymentWindow(expiresAt) {
   paymentExpiryTimer = setTimeout(updateCountdown, Math.max(0, expiresAt - Date.now()));
 }
 
-// Ensure Demo Payment Modal exists in DOM
+// Ensure the payment modal exists in the DOM
 function ensurePaymentModalExists() {
-  let modal = document.getElementById('demo-payment-modal');
+  let modal = document.getElementById('payment-modal');
   if (modal) return modal;
 
   modal = document.createElement('div');
-  modal.id = 'demo-payment-modal';
+  modal.id = 'payment-modal';
   modal.className = 'modal-backdrop';
   modal.innerHTML = `
-    <div class="modal-dialog" style="max-width: 520px; width: 92%; border-radius: var(--radius-lg); overflow: hidden; box-shadow: 0 20px 45px rgba(0,0,0,0.25);">
+    <div class="modal-dialog" style="max-width: 480px; width: min(92%, 480px); max-height: calc(100dvh - 24px); display: flex; flex-direction: column; border-radius: var(--radius-lg); overflow: hidden; box-shadow: 0 20px 45px rgba(0,0,0,0.25);">
       <!-- Modal Header -->
       <div class="modal-header" style="background: linear-gradient(135deg, #15803d 0%, #166534 100%); color: white; padding: 1.25rem 1.5rem;">
         <div style="display: flex; align-items: center; gap: 0.75rem;">
@@ -145,20 +145,20 @@ function ensurePaymentModalExists() {
         <button class="btn-icon" id="close-payment-modal-btn" aria-label="Close" style="color: white; background: rgba(255,255,255,0.12); border-radius: 50%;">&times;</button>
       </div>
 
-      <!-- Test payment disclosure -->
+      <!-- Simulation disclosure -->
       <div id="payment-disclosure" style="background: #fffbeb; border-bottom: 1px solid #fef3c7; color: #92400e; padding: 0.6rem 1.25rem; font-size: 0.78rem; text-align: center; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
         <span>🎓</span>
-        <span>Test payment · No real charge will be made</span>
+        <span>Simulated payment · No real charge will be made</span>
       </div>
 
-      <div class="modal-body" style="padding: 1.5rem;">
+        <div class="modal-body" style="padding: 1rem; overflow-y: auto; min-height: 0;">
         <div id="payment-view-card" style="display:none;">
           <h3 style="margin:0 0 .4rem;">Pay by card</h3>
-          <p style="color:var(--text-muted);font-size:.85rem;">Test checkout only. Use the sample values shown below; never enter a real card.</p>
+          <p style="color:var(--text-muted);font-size:.85rem;">Simulation only. Use the sample values shown below; never enter a real card.</p>
           <form id="test-card-form" novalidate>
-            <label for="test-card-number">Test card number</label>
+            <label for="test-card-number">Credit or debit card number</label>
             <input class="form-control" id="test-card-number" inputmode="numeric" autocomplete="off" value="4242 4242 4242 4242" required aria-describedby="test-card-help">
-            <small id="test-card-help" style="display:block;color:var(--text-muted);margin:.3rem 0 .8rem;">Sample card: 4242 4242 4242 4242 · future expiry: 12/30 · security code: 123</small>
+            <small id="test-card-help" style="display:block;color:var(--text-muted);margin:.3rem 0 .8rem;">Sample details: 4242 4242 4242 4242 · expiry: 12/30 · security code: 123. Do not enter real card details.</small>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
               <div><label for="test-card-expiry">Expiry</label><input class="form-control" id="test-card-expiry" placeholder="MM/YY" value="12/30" required></div>
               <div><label for="test-card-cvv">Security code</label><input class="form-control" id="test-card-cvv" inputmode="numeric" autocomplete="off" value="123" maxlength="4" required></div>
@@ -194,11 +194,11 @@ function ensurePaymentModalExists() {
           </div>
 
           <!-- Dynamic Scannable QR Code Container -->
-          <div style="text-align: center; margin-bottom: 1.25rem;">
-            <div id="qr-code-svg-container" style="display: inline-block; padding: 12px; background: white; border: 2px solid #e2e8f0; border-radius: var(--radius-lg); box-shadow: 0 4px 14px rgba(0,0,0,0.06);">
+          <div style="text-align: center; margin-bottom: .75rem;">
+            <div id="qr-code-svg-container" style="display: inline-block; padding: 8px; background: white; border: 2px solid #e2e8f0; border-radius: var(--radius-lg); box-shadow: 0 4px 14px rgba(0,0,0,0.06);">
               <!-- SVG QR inserted dynamically -->
             </div>
-            <div id="qr-scan-help" style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.6rem;">
+            <div id="qr-scan-help" style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.35rem;">
               Scan with Google Lens, then tap the GasBridge payment link to continue.
             </div>
             <a id="qr-open-payment-link" href="#" target="_blank" rel="noopener noreferrer" style="display:none; margin-top:0.45rem; font-size:0.85rem; font-weight:700;">Open payment link</a>
@@ -220,7 +220,7 @@ function ensurePaymentModalExists() {
             </button>
             <div style="display: flex; gap: 0.5rem;">
               <button type="button" class="btn btn-outline btn-sm" id="btn-simulate-fail" style="flex: 1; color: #dc2626; border-color: #fca5a5;">
-                Simulate Payment Failure
+                Payment didn't work
               </button>
               <button type="button" class="btn btn-outline btn-sm" id="btn-cancel-payment" style="flex: 1;">
                 Cancel
@@ -236,7 +236,7 @@ function ensurePaymentModalExists() {
           </div>
           <h3 style="font-family: 'Outfit', sans-serif; font-size: 1.35rem; margin-bottom: 0.4rem; color: var(--text-main);">Confirm Payment</h3>
           <p style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.5; max-width: 380px; margin: 0 auto 1.25rem;">
-            Confirm the test checkout to complete this booking. No money will be charged.
+            Confirm the simulated checkout to complete this booking. No money will be charged.
           </p>
 
           <div style="background: #f1f5f9; border-radius: var(--radius-md); padding: 0.85rem; margin-bottom: 1.5rem; text-align: left; font-size: 0.85rem;">
@@ -246,7 +246,7 @@ function ensurePaymentModalExists() {
             </div>
             <div style="display: flex; justify-content: space-between;">
               <span style="color: var(--text-muted);">Payment mode:</span>
-              <span class="badge badge-warning" style="font-size: 0.72rem;">Test · no charge</span>
+              <span class="badge badge-warning" style="font-size: 0.72rem;">Simulation · no charge</span>
             </div>
           </div>
 
@@ -284,9 +284,9 @@ function ensurePaymentModalExists() {
           <div style="width: 60px; height: 60px; border-radius: 50%; background: #dcfce7; color: #15803d; font-size: 2rem; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem;">
             ✓
           </div>
-          <h3 style="font-family: 'Outfit', sans-serif; font-size: 1.45rem; color: #15803d; margin-bottom: 0.25rem;">✓ Test Payment Confirmed</h3>
+          <h3 id="success-title" style="font-family: 'Outfit', sans-serif; font-size: 1.45rem; color: #15803d; margin-bottom: 0.25rem;">✓ Payment Confirmed</h3>
           <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.25rem;">
-            Your cylinder refill order has been confirmed. No money was charged.
+            Your order has been confirmed. No money was charged in this simulation.
           </p>
 
           <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem 1.25rem; margin-bottom: 1.5rem; text-align: left; font-size: 0.86rem; line-height: 1.6;">
@@ -304,11 +304,11 @@ function ensurePaymentModalExists() {
             </div>
             <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; margin-bottom: 0.4rem;">
               <span style="color: var(--text-muted);">Payment Method:</span>
-              <span id="success-payment-method" style="font-weight: 600;">UPI test checkout</span>
+              <span id="success-payment-method" style="font-weight: 600;">UPI simulation</span>
             </div>
             <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; margin-bottom: 0.4rem;">
               <span style="color: var(--text-muted);">Payment Status:</span>
-              <span id="success-payment-status" class="badge badge-success" style="font-size: 0.72rem;">Test confirmed</span>
+              <span id="success-payment-status" class="badge badge-success" style="font-size: 0.72rem;">Paid</span>
             </div>
             <div style="display: flex; justify-content: space-between;">
               <span style="color: var(--text-muted);">Date / Time:</span>
@@ -354,7 +354,7 @@ function ensurePaymentModalExists() {
     const cvv = modal.querySelector('#test-card-cvv').value.trim();
     if (number !== '4242424242424242' || expiry !== '12/30' || cvv !== '123') {
       event.currentTarget.reset();
-      showToast('Test card details not accepted', 'Use the sample values displayed on this form.', 'error');
+      showToast('Card details not accepted', 'Use the sample values displayed on this form.', 'error');
       return;
     }
     event.currentTarget.reset();
@@ -370,7 +370,7 @@ function ensurePaymentModalExists() {
 function closeModalHandler() {
   stopPaymentWindow();
   void cancelPendingBooking('Checkout was closed before payment confirmation.');
-  const modal = document.getElementById('demo-payment-modal');
+  const modal = document.getElementById('payment-modal');
   if (modal) {
     modal.querySelector('#test-card-form')?.reset();
     modal.classList.remove('active');
@@ -379,7 +379,7 @@ function closeModalHandler() {
 }
 
 function switchView(viewName) {
-  const modal = document.getElementById('demo-payment-modal');
+  const modal = document.getElementById('payment-modal');
   if (!modal) return;
   modal.querySelector('#payment-view-qr').style.display = viewName === 'qr' ? 'block' : 'none';
   modal.querySelector('#payment-view-confirm').style.display = viewName === 'confirm' ? 'block' : 'none';
@@ -394,7 +394,7 @@ function showQRView() {
 }
 
 function showConfirmationView() {
-  const modal = document.getElementById('demo-payment-modal');
+  const modal = document.getElementById('payment-modal');
   const confirmAmt = modal.querySelector('#confirm-pay-amount');
   if (confirmAmt && activeOrderContext) {
     confirmAmt.textContent = formatCurrency(activeOrderContext.totalAmount);
@@ -407,7 +407,7 @@ function paymentMethodLabel(method) {
 }
 
 /**
- * Open Demo Payment Modal for an order context.
+ * Open payment modal for an order context.
  * Adheres to rule 26: Duplicate Protection & Rule 21: Dynamic Scannable QR.
  */
 export async function openDemoPaymentModal(context) {
@@ -415,10 +415,10 @@ export async function openDemoPaymentModal(context) {
   activeOrderContext = context;
   const modal = ensurePaymentModalExists();
   const methodText = {
-    upi_qr: ['Scan the QR code with your UPI app', 'Test payment · No real charge will be made'],
-    card: ['Use the sample test card details', 'Card test checkout · Do not enter real card details'],
+    upi_qr: ['Scan the QR code with your UPI app', 'Simulated payment · No real charge will be made'],
+    card: ['Use the sample card details', 'Card simulation · Do not enter real card details'],
     cod: ['Pay cash when the delivery arrives', 'No online payment · Cash due at delivery']
-  }[context.paymentMethod] || ['Scan the QR code with your UPI app', 'Test payment · No real charge will be made'];
+  }[context.paymentMethod] || ['Scan the QR code with your UPI app', 'Simulated payment · No real charge will be made'];
   modal.querySelector('#payment-header-hint').textContent = methodText[0];
   modal.querySelector('#payment-disclosure span:last-child').textContent = methodText[1];
   modal.querySelector('#btn-retry-payment').style.display = '';
@@ -504,7 +504,7 @@ export async function openDemoPaymentModal(context) {
     return;
   }
   if (context.paymentMethod === 'card') {
-    modal.querySelector('#success-payment-method').textContent = 'Card · test checkout';
+    modal.querySelector('#success-payment-method').textContent = 'Credit / debit card simulation';
     switchView('card');
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
@@ -531,7 +531,7 @@ export async function openDemoPaymentModal(context) {
   const confirmationOrigin = firebaseConfig.projectId
     ? `https://${firebaseConfig.projectId}.web.app`
     : window.location.origin;
-  const confirmationUrl = new URL('/pages/demo-payment-confirm.html', confirmationOrigin);
+  const confirmationUrl = new URL('/pages/payment-confirm.html', confirmationOrigin);
   confirmationUrl.searchParams.set('bookingId', bookingId);
   confirmationUrl.searchParams.set('confirmationId', confirmationId || bookingId);
   confirmationUrl.searchParams.set('token', confirmationToken);
@@ -539,7 +539,7 @@ export async function openDemoPaymentModal(context) {
   qrPayload = confirmationUrl.href;
 
   const qrSvg = generateQRCodeSVG(qrPayload, {
-    size: 280,
+    size: 190,
     margin: 4,
     darkColor: "#000000"
   });
@@ -556,8 +556,8 @@ export async function openDemoPaymentModal(context) {
   modal.querySelector('#btn-simulate-fail').style.display = isDemo ? 'block' : 'none';
   modal.querySelector('#qr-live-waiting').style.display = isDemo ? 'none' : 'block';
   modal.querySelector('#qr-scan-help').textContent = isDemo
-    ? 'Test mode: use “I’ve Scanned the QR” to continue. No real charge will be made.'
-    : 'Scan with Google Lens, then tap the GasBridge payment link to continue.';
+    ? 'Scan this QR, then confirm the simulated payment here. No real charge will be made.'
+    : 'Scan with Google Lens and open the GasBridge link. Confirm the simulated payment here.';
 
   switchView('qr');
   modal.classList.add('active');
@@ -596,6 +596,17 @@ async function handleCodOrder() {
       statusTimeline: timeline
     });
     try {
+      await createNotification(
+        activeOrderContext.customer.uid,
+        'customer',
+        'Booking confirmed',
+        `Your cash-on-delivery booking ${currentBooking.bookingId} is confirmed. Cash is due when it is delivered.`,
+        `customer-tracking.html?id=${currentBooking.bookingId}`
+      );
+    } catch (notificationError) {
+      console.warn('COD order placed, but the customer notification could not be saved:', notificationError);
+    }
+    try {
       const distributor = await getDistributorById(activeOrderContext.distributorId);
       if (distributor) {
         await createNotification(
@@ -609,7 +620,7 @@ async function handleCodOrder() {
     } catch (notificationError) {
       console.warn('COD order placed, but distributor notification could not be saved:', notificationError);
     }
-    const modal = document.getElementById('demo-payment-modal');
+    const modal = document.getElementById('payment-modal');
     modal.querySelector('#success-booking-id').textContent = currentBooking.bookingId;
     modal.querySelector('#success-tx-id').textContent = 'Pay on delivery';
     modal.querySelector('#success-amount').textContent = formatCurrency(activeOrderContext.totalAmount);
@@ -634,32 +645,32 @@ async function handleCodOrder() {
  * Explicit user choice, not randomly generated.
  */
 async function handlePaymentFailure() {
-  const modal = document.getElementById('demo-payment-modal');
+  const modal = document.getElementById('payment-modal');
 
   await logAuditEvent(
     activeOrderContext.customer.uid,
     "customer",
     "PAYMENT_FAILED",
     currentBooking ? currentBooking.bookingId : 'unknown',
-    `Demo payment simulated failure for transaction ${currentTransactionRef}.`
+    `Simulated payment failed for transaction ${currentTransactionRef}.`
   );
 
   switchView('failure');
-  showToast("Payment Failed", "The test payment was not completed. No charge was made.", "error");
+  showToast("Payment Failed", "The simulated payment was not completed. No charge was made.", "error");
 }
 
 /**
  * Handle simulated payment success (Rule 20, 22, 25).
- * Only completes after "I've Scanned the QR" + "Confirm Demo Payment".
+ * Completes after explicit in-page payment confirmation.
  */
 async function handlePaymentSuccess() {
   // A scan received before expiry owns the attempt; stop the expiry callback
   // before the confirmation write can race it.
   stopPaymentWindow();
-  const modal = document.getElementById('demo-payment-modal');
+  const modal = document.getElementById('payment-modal');
   const confirmBtn = modal.querySelector('#btn-confirm-final-payment');
   confirmBtn.disabled = true;
-  confirmBtn.textContent = "Processing Demo Payment...";
+  confirmBtn.textContent = "Processing payment...";
   let paymentStep = 'loading booking details';
 
   // Brief latency simulation (700ms)
@@ -717,7 +728,7 @@ async function handlePaymentSuccess() {
     currentBooking = confirmedBooking;
 
     if (isDemo) {
-      if (confirmedBooking.paymentStatus !== 'paid') throw new Error('Demo payment did not confirm the booking.');
+      if (confirmedBooking.paymentStatus !== 'paid') throw new Error('Payment simulation did not confirm the booking.');
       await savePaymentRecord(paymentRecord);
       await deductInventoryStock(confirmedBooking.distributorId, confirmedBooking.cylinderType, confirmedBooking.quantity);
     }
@@ -729,7 +740,7 @@ async function handlePaymentSuccess() {
         "customer",
         "PAYMENT_SUCCESS",
         paymentId,
-        `${paymentMethodLabel(activeOrderContext.paymentMethod)} test payment of ${formatCurrency(activeOrderContext.totalAmount)} verified for booking ${bookingId} (Ref: ${currentTransactionRef}).`
+        `${paymentMethodLabel(activeOrderContext.paymentMethod)} simulated payment of ${formatCurrency(activeOrderContext.totalAmount)} confirmed for booking ${bookingId} (Ref: ${currentTransactionRef}).`
       );
     } catch (auditError) {
       console.warn('Payment succeeded, but the audit record could not be saved:', auditError);
@@ -748,14 +759,27 @@ async function handlePaymentSuccess() {
     } catch (notificationError) {
       console.warn('Payment succeeded, but the distributor notification could not be saved:', notificationError);
     }
+    if (!isDemo) {
+      try {
+        await createNotification(
+          activeOrderContext.customer.uid,
+          'customer',
+          'Booking confirmed',
+          `Your ${paymentMethodLabel(activeOrderContext.paymentMethod)} booking ${bookingId} is confirmed.`,
+          `customer-tracking.html?id=${bookingId}`
+        );
+      } catch (notificationError) {
+        console.warn('Payment succeeded, but the customer notification could not be saved:', notificationError);
+      }
+    }
 
     // 4. Populate Success Screen
     modal.querySelector('#success-booking-id').textContent = bookingId;
     modal.querySelector('#success-tx-id').textContent = currentTransactionRef;
     modal.querySelector('#success-amount').textContent = formatCurrency(activeOrderContext.totalAmount);
     modal.querySelector('#success-datetime').textContent = formatDateTime(nowIso);
-    modal.querySelector('#success-payment-method').textContent = `${paymentMethodLabel(activeOrderContext.paymentMethod)} · test checkout`;
-    modal.querySelector('#success-payment-status').textContent = 'Test confirmed';
+    modal.querySelector('#success-payment-method').textContent = `${paymentMethodLabel(activeOrderContext.paymentMethod)} · simulation`;
+    modal.querySelector('#success-payment-status').textContent = 'Paid';
 
     const viewBookingLink = modal.querySelector('#btn-view-booking');
     if (viewBookingLink) {
@@ -764,7 +788,7 @@ async function handlePaymentSuccess() {
 
     stopPaymentWindow();
     switchView('success');
-    showToast("Test Payment Confirmed", `Booking ${bookingId} has been confirmed. No money was charged.`, "success");
+    showToast("Payment Confirmed", `Booking ${bookingId} has been confirmed. No money was charged in this simulation.`, "success");
 
   } catch (err) {
     console.error("Payment Confirmation Error:", err);

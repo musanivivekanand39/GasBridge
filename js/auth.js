@@ -32,7 +32,14 @@ import {
   logAuditEvent,
   getCustomerProfile,
   getUserProfile,
-  getDistributorById
+  getDistributorById,
+  getDistributorInventory,
+  getBookings,
+  getNotifications,
+  getDistributorCustomers,
+  getAuditLogs,
+  getPendingDeliveryAgents,
+  getPendingDistributorCustomers
 } from "./firestore.js";
 
 import { ADMIN_CONFIG } from "./firebase-config.js";
@@ -93,12 +100,26 @@ export function setActiveUser(userObj) {
   const safeUser = { ...userObj };
   delete safeUser.password;
   delete safeUser.passwordHash;
+  const previousUser = getCurrentUser();
+  if (previousUser?.uid && previousUser.uid !== safeUser.uid) clearPageDataCache(previousUser.uid);
   localStorage.setItem(ACTIVE_USER_KEY, JSON.stringify(safeUser));
 }
 
 // Clear active user session
 export function clearActiveUser() {
+  const previousUser = getCurrentUser();
+  if (previousUser?.uid) clearPageDataCache(previousUser.uid);
   localStorage.removeItem(ACTIVE_USER_KEY);
+}
+
+function clearPageDataCache(uid) {
+  const prefix = `gasbridge_page_data_v1:${uid}:`;
+  try {
+    for (let i = sessionStorage.length - 1; i >= 0; i--) {
+      const key = sessionStorage.key(i);
+      if (key?.startsWith(prefix)) sessionStorage.removeItem(key);
+    }
+  } catch { /* Session storage may be unavailable in private browsing. */ }
 }
 
 // Role dashboard destinations
@@ -205,7 +226,41 @@ export async function requireAuth(allowedRoles = []) {
   // Setup 15-Minute Inactivity Auto-Logout (Rule 42)
   setupInactivityAutoLogout(user);
 
+  // Warm the data used across this role's pages in the background. These
+  // functions share the session cache with page initializers, so each query is
+  // issued once and navigation can reuse its result.
+  void warmRolePageData(user).catch(error => console.warn('Could not warm page data:', error));
+
   return user;
+}
+
+async function warmRolePageData(user) {
+  const requests = [getNotifications(user.uid, user.role)];
+  if (user.role === 'customer') {
+    requests.push(getCustomerProfile(user.uid), getBookings({ customerId: user.uid }));
+    if (user.distributorId) requests.push(getDistributorInventory(user.distributorId));
+    requests.push(getDistributors(), getServiceAreas());
+  } else if (user.role === 'distributor') {
+    const distributorId = user.distributorId;
+    if (distributorId) {
+      requests.push(
+        getBookings({ distributorId }),
+        getDistributorInventory(distributorId),
+        getDeliveryAgents(distributorId),
+        getPendingDeliveryAgents(distributorId),
+        getPendingDistributorCustomers(distributorId),
+        getDistributorCustomers(distributorId),
+        getServiceAreas()
+      );
+    }
+  } else if (user.role === 'agent' || user.role === 'deliveryAgent') {
+    requests.push(getBookings({ deliveryAgentId: user.agentId || 'agent-01' }));
+  } else if (user.role === 'admin') {
+    requests.push(getAllCustomers(), getServiceAreas(), getDeliveryAgents(), getBookings(), getAuditLogs());
+    const distributors = await getDistributors();
+    requests.push(...distributors.map(distributor => getDistributorInventory(distributor.id)));
+  }
+  await Promise.allSettled(requests);
 }
 
 // 15-minute inactivity monitor (Rule 42)
@@ -236,7 +291,7 @@ export async function loginUser(emailOrMobile, password) {
   }
 
   if (isDemo) {
-    throw new Error("Demo mode has no secure authentication configured. Connect Firebase Authentication before signing in.");
+    throw new Error("Secure authentication is not configured. Connect Firebase Authentication before signing in.");
   }
 
   // Resolve email if user entered mobile number

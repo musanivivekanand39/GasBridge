@@ -147,9 +147,10 @@
         const distributors = await getDistributors();
         const tbody = document.getElementById('admin-global-inventory-tbody');
 
+        const inventoryRecords = await Promise.all(distributors.map(distributor => getDistributorInventory(distributor.id)));
         const rows = [];
-        for (const d of distributors) {
-          const inv = await getDistributorInventory(d.id);
+        for (const [index, d] of distributors.entries()) {
+          const inv = inventoryRecords[index];
           const domAvail = inv.domestic ? inv.domestic.available : 0;
           const domRes = inv.domestic ? inv.domestic.reserved : 0;
           const comAvail = inv.commercial ? inv.commercial.available : 0;

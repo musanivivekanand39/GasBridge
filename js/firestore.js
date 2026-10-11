@@ -46,8 +46,62 @@ const STORAGE_KEYS = {
   AUDIT_LOGS: 'gasbridge_audit_logs'
 };
 
+const PAGE_CACHE_PREFIX = 'gasbridge_page_data_v1:';
+const pendingPageReads = new Map();
+
+function pageCacheScope() {
+  if (auth?.currentUser?.uid) return auth.currentUser.uid;
+  try {
+    return JSON.parse(localStorage.getItem('gasbridge_active_user') || '{}').uid || 'guest';
+  } catch {
+    return 'guest';
+  }
+}
+
+function pageCacheKey(key) {
+  return `${PAGE_CACHE_PREFIX}${pageCacheScope()}:${key}`;
+}
+
+function invalidatePageDataCache() {
+  try {
+    const scopePrefix = `${PAGE_CACHE_PREFIX}${pageCacheScope()}:`;
+    for (let i = sessionStorage.length - 1; i >= 0; i--) {
+      const key = sessionStorage.key(i);
+      if (key?.startsWith(scopePrefix)) sessionStorage.removeItem(key);
+    }
+  } catch { /* Storage may be unavailable in private browsing. */ }
+}
+
+async function cachedPageData(key, load, ttlMs = 10000) {
+  const storageKey = pageCacheKey(key);
+  try {
+    const cached = JSON.parse(sessionStorage.getItem(storageKey) || 'null');
+    if (cached && cached.expiresAt > Date.now()) return cached.data;
+  } catch { /* Ignore expired, malformed, or unavailable browser cache. */ }
+
+  if (pendingPageReads.has(storageKey)) return pendingPageReads.get(storageKey);
+  const pending = (async () => {
+    const data = await load();
+    try {
+      sessionStorage.setItem(storageKey, JSON.stringify({ data, expiresAt: Date.now() + ttlMs }));
+    } catch { /* Firestore remains the source of truth if browser storage is full. */ }
+    return data;
+  })();
+  pendingPageReads.set(storageKey, pending);
+  try {
+    return await pending;
+  } finally {
+    pendingPageReads.delete(storageKey);
+  }
+}
+
 function persistLocally() { return isDemo || !db; }
-function requireLiveWrite(write) { return isDemo || !db ? Promise.resolve() : write(); }
+async function requireLiveWrite(write) {
+  if (isDemo || !db) return;
+  const result = await write();
+  invalidatePageDataCache();
+  return result;
+}
 function normalizePincodeValues(...values) {
   const raw = values.flatMap(value => Array.isArray(value) ? value : [value])
     .flatMap(value => String(value ?? '').split(/[,;\s]+/))
@@ -111,7 +165,7 @@ function initDemoStore() {
       createdAt: new Date(Date.now() - 3600000 * 3).toISOString(),
       updatedAt: new Date().toISOString(),
       statusTimeline: [
-        { status: "confirmed", time: new Date(Date.now() - 3600000 * 3).toISOString(), note: "Booking confirmed via Demo QR Payment." },
+        { status: "confirmed", time: new Date(Date.now() - 3600000 * 3).toISOString(), note: "Booking confirmed via UPI." },
         { status: "processing", time: new Date(Date.now() - 3600000 * 2).toISOString(), note: "Distributor processed order." },
         { status: "agent_assigned", time: new Date(Date.now() - 3600000 * 1.5).toISOString(), note: "Agent Suresh Kumar assigned." },
         { status: "picked_up", time: new Date(Date.now() - 3600000 * 1).toISOString(), note: "Cylinder loaded onto delivery vehicle." },
@@ -208,29 +262,33 @@ export async function resolveServiceAreaByPincode(pincode) {
    ========================================================================== */
 
 export async function getServiceAreas() {
-  if (!isDemo && db) {
-    try {
-      const snap = await getDocs(collection(db, "serviceAreas"));
-      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    } catch (e) {
-      console.warn("Firestore error reading serviceAreas:", e);
-      throw e;
+  return cachedPageData('reference:serviceAreas', async () => {
+    if (!isDemo && db) {
+      try {
+        const snap = await getDocs(collection(db, "serviceAreas"));
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      } catch (e) {
+        console.warn("Firestore error reading serviceAreas:", e);
+        throw e;
+      }
     }
-  }
-  return JSON.parse(localStorage.getItem(STORAGE_KEYS.SERVICE_AREAS) || '[]');
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.SERVICE_AREAS) || '[]');
+  }, 300000);
 }
 
 export async function getDistributors() {
-  if (!isDemo && db) {
-    try {
-      const snap = await getDocs(collection(db, "distributors"));
-      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    } catch (e) {
-      console.warn("Firestore error reading distributors:", e);
-      throw e;
+  return cachedPageData('reference:distributors', async () => {
+    if (!isDemo && db) {
+      try {
+        const snap = await getDocs(collection(db, "distributors"));
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      } catch (e) {
+        console.warn("Firestore error reading distributors:", e);
+        throw e;
+      }
     }
-  }
-  return JSON.parse(localStorage.getItem(STORAGE_KEYS.DISTRIBUTORS) || '[]');
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.DISTRIBUTORS) || '[]');
+  }, 120000);
 }
 
 export async function getDistributorById(distributorId) {
@@ -239,70 +297,72 @@ export async function getDistributorById(distributorId) {
 }
 
 export async function getDeliveryAgents(distributorId = null) {
-  let agents = [];
-  if (!isDemo && db) {
-    try {
-      let q = collection(db, "deliveryAgents");
-      if (distributorId) {
-        q = query(q, where("distributorId", "==", distributorId));
+  return cachedPageData(`deliveryAgents:${distributorId || 'all'}`, async () => {
+    let agents = [];
+    if (!isDemo && db) {
+      try {
+        let q = collection(db, "deliveryAgents");
+        if (distributorId) {
+          q = query(q, where("distributorId", "==", distributorId));
+        }
+        const snap = await getDocs(q);
+        agents = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      } catch (e) {
+        console.warn("Firestore error reading deliveryAgents:", e);
+        throw e;
       }
-      const snap = await getDocs(q);
-      agents = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    } catch (e) {
-      console.warn("Firestore error reading deliveryAgents:", e);
-      throw e;
     }
-  }
-  if (agents.length === 0 && persistLocally()) {
-    agents = JSON.parse(localStorage.getItem(STORAGE_KEYS.DELIVERY_AGENTS) || '[]');
-  }
-  if (distributorId) {
-    return agents.filter(a => a.distributorId === distributorId);
-  }
-  return agents;
+    if (agents.length === 0 && persistLocally()) {
+      agents = JSON.parse(localStorage.getItem(STORAGE_KEYS.DELIVERY_AGENTS) || '[]');
+    }
+    return distributorId ? agents.filter(a => a.distributorId === distributorId) : agents;
+  }, 60000);
 }
 
 export async function getDeliveryAgentById(agentId) {
-  if (!persistLocally()) {
-    const snap = await getDoc(doc(db, 'deliveryAgents', agentId));
-    return snap.exists() ? { id: snap.id, ...snap.data() } : null;
-  }
-  return (await getDeliveryAgents()).find(agent => agent.id === agentId) || null;
+  return cachedPageData(`deliveryAgent:${agentId}`, async () => {
+    if (!persistLocally()) {
+      const snap = await getDoc(doc(db, 'deliveryAgents', agentId));
+      return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+    }
+    return (await getDeliveryAgents()).find(agent => agent.id === agentId) || null;
+  }, 60000);
 }
 
 export async function getCustomerProfile(customerId) {
-  if (!isDemo && db) {
-    try {
-      const docRef = doc(db, "customers", customerId);
-      const snap = await getDoc(docRef);
-      if (snap.exists()) {
-        return { uid: snap.id, ...snap.data() };
+  return cachedPageData(`customer:${customerId}`, async () => {
+    if (!isDemo && db) {
+      try {
+        const docRef = doc(db, "customers", customerId);
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+          return { uid: snap.id, ...snap.data() };
+        }
+        return null;
+      } catch (e) {
+        console.warn("Firestore error reading customer profile:", e);
+        throw e;
       }
-      return null;
-    } catch (e) {
-      console.warn("Firestore error reading customer profile:", e);
-      throw e;
     }
-  }
-  const customers = JSON.parse(localStorage.getItem(STORAGE_KEYS.CUSTOMERS) || '[]');
-  return customers.find(c => c.uid === customerId || c.userId === customerId) || null;
+    const customers = JSON.parse(localStorage.getItem(STORAGE_KEYS.CUSTOMERS) || '[]');
+    return customers.find(c => c.uid === customerId || c.userId === customerId) || null;
+  }, 60000);
 }
 
 export async function getUserProfile(uid) {
-  if (!isDemo && db) {
-    try {
-      const snap = await getDoc(doc(db, "users", uid));
-      if (snap.exists()) {
-        return snap.data();
+  return cachedPageData(`user:${uid}`, async () => {
+    if (!isDemo && db) {
+      try {
+        const snap = await getDoc(doc(db, "users", uid));
+        return snap.exists() ? snap.data() : null;
+      } catch (e) {
+        console.warn("Firestore error reading user profile:", e);
+        throw e;
       }
-      return null;
-    } catch (e) {
-      console.warn("Firestore error reading user profile:", e);
-      throw e;
     }
-  }
-  const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
-  return users.find(u => u.uid === uid) || null;
+    const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '[]');
+    return users.find(u => u.uid === uid) || null;
+  }, 15000);
 }
 
 export async function saveCustomerProfile(profileData) {
@@ -367,6 +427,7 @@ export async function saveCustomerProfile(profileData) {
         rejectionReason: cleanProfile.rejectionReason || null, updatedAt: timestamp
       });
       await batch.commit();
+      invalidatePageDataCache();
       return cleanProfile;
     }
     const batch = writeBatch(db);
@@ -374,6 +435,7 @@ export async function saveCustomerProfile(profileData) {
     const userRef = doc(db, "users", cleanProfile.uid);
     batch.set(userRef, userRec);
     await batch.commit();
+    invalidatePageDataCache();
     return cleanProfile;
   }
   await requireLiveWrite(async () => {
@@ -397,6 +459,7 @@ export async function saveCustomerProfile(profileData) {
   else users.push(userRecLocal);
   localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
 
+  invalidatePageDataCache();
   return cleanProfile;
 }
 
@@ -453,12 +516,14 @@ export async function saveDistributor(distData) {
       });
       batch.update(doc(db, 'users', cleanDist.userId), { status: cleanDist.status, approvalStatus: cleanDist.status, updatedAt: timestamp });
       await batch.commit();
+      invalidatePageDataCache();
       return cleanDist;
     }
     const dists = await getDistributors();
     const idx = dists.findIndex(item => item.id === cleanDist.id);
     if (idx >= 0) dists[idx] = { ...dists[idx], ...cleanDist };
     localStorage.setItem(STORAGE_KEYS.DISTRIBUTORS, JSON.stringify(dists));
+    invalidatePageDataCache();
     return cleanDist;
   }
   if (!persistLocally()) {
@@ -468,6 +533,7 @@ export async function saveDistributor(distData) {
     if (cleanDist.status === 'pending') batch.set(userRef, linkedUser);
     else batch.update(userRef, { status: cleanDist.status, approvalStatus: cleanDist.status, updatedAt: timestamp });
     await batch.commit();
+    invalidatePageDataCache();
     return cleanDist;
   }
   await requireLiveWrite(() => setDoc(doc(db, "distributors", cleanDist.id), cleanDist, { merge: true }));
@@ -478,6 +544,7 @@ export async function saveDistributor(distData) {
   if (idx >= 0) dists[idx] = { ...dists[idx], ...cleanDist };
   else dists.push(cleanDist);
   localStorage.setItem(STORAGE_KEYS.DISTRIBUTORS, JSON.stringify(dists));
+  invalidatePageDataCache();
   return cleanDist;
 }
 
@@ -538,12 +605,14 @@ export async function saveDeliveryAgent(agentData) {
         rejectionReason: cleanAgent.rejectionReason || null, updatedAt: timestamp
       });
       await batch.commit();
+      invalidatePageDataCache();
       return cleanAgent;
     }
     const agents = await getDeliveryAgents();
     const idx = agents.findIndex(item => item.id === cleanAgent.id);
     if (idx >= 0) agents[idx] = { ...agents[idx], ...cleanAgent };
     localStorage.setItem(STORAGE_KEYS.DELIVERY_AGENTS, JSON.stringify(agents));
+    invalidatePageDataCache();
     return cleanAgent;
   }
   if (!persistLocally()) {
@@ -553,6 +622,7 @@ export async function saveDeliveryAgent(agentData) {
     if (cleanAgent.status === 'pending') batch.set(userRef, linkedUser, { merge: true });
     else batch.update(userRef, { status: cleanAgent.status, approvalStatus: cleanAgent.status, updatedAt: timestamp });
     await batch.commit();
+    invalidatePageDataCache();
     return cleanAgent;
   }
   await requireLiveWrite(() => setDoc(doc(db, "deliveryAgents", cleanAgent.id), cleanAgent, { merge: true }));
@@ -563,6 +633,7 @@ export async function saveDeliveryAgent(agentData) {
   if (idx >= 0) agents[idx] = { ...agents[idx], ...cleanAgent };
   else agents.push(cleanAgent);
   localStorage.setItem(STORAGE_KEYS.DELIVERY_AGENTS, JSON.stringify(agents));
+  invalidatePageDataCache();
   return cleanAgent;
 }
 
@@ -570,6 +641,7 @@ export async function saveServiceArea(areaData) {
   if (!persistLocally()) {
     if (!(await hasAdminAccess())) throw new Error('Only an administrator can maintain service areas.');
     await setDoc(doc(db, "serviceAreas", areaData.id), areaData, { merge: true });
+    invalidatePageDataCache();
   }
   if (!persistLocally()) return areaData;
   const areas = await getServiceAreas();
@@ -577,6 +649,7 @@ export async function saveServiceArea(areaData) {
   if (idx >= 0) areas[idx] = areaData;
   else areas.push(areaData);
   localStorage.setItem(STORAGE_KEYS.SERVICE_AREAS, JSON.stringify(areas));
+  invalidatePageDataCache();
   return areaData;
 }
 
@@ -585,26 +658,28 @@ export async function saveServiceArea(areaData) {
    ========================================================================== */
 
 export async function getDistributorInventory(distributorId) {
-  if (!isDemo && db) {
-    try {
-      const snap = await getDoc(doc(db, "inventory", distributorId));
-      if (snap.exists()) {
-        return snap.data();
+  return cachedPageData(`inventory:${distributorId}`, async () => {
+    if (!isDemo && db) {
+      try {
+        const snap = await getDoc(doc(db, "inventory", distributorId));
+        if (snap.exists()) {
+          return snap.data();
+        }
+      } catch (e) {
+        console.warn("Firestore inventory read error:", e);
+        throw e;
       }
-    } catch (e) {
-      console.warn("Firestore inventory read error:", e);
-      throw e;
+      return { distributorId, domestic: { available: 0, reserved: 0 }, commercial: { available: 0, reserved: 0 }, lowStockThreshold: 15 };
     }
-    return { distributorId, domestic: { available: 0, reserved: 0 }, commercial: { available: 0, reserved: 0 }, lowStockThreshold: 15 };
-  }
-  const allInventory = JSON.parse(localStorage.getItem(STORAGE_KEYS.INVENTORY) || '{}');
-  return allInventory[distributorId] || {
-    distributorId,
-    domestic: { available: 80, reserved: 0 },
-    commercial: { available: 30, reserved: 0 },
-    lowStockThreshold: 15,
-    updatedAt: new Date().toISOString()
-  };
+    const allInventory = JSON.parse(localStorage.getItem(STORAGE_KEYS.INVENTORY) || '{}');
+    return allInventory[distributorId] || {
+      distributorId,
+      domestic: { available: 80, reserved: 0 },
+      commercial: { available: 30, reserved: 0 },
+      lowStockThreshold: 15,
+      updatedAt: new Date().toISOString()
+    };
+  }, 20000);
 }
 
 export async function initializeDistributorInventory(distributorId, inventoryData) {
@@ -612,6 +687,7 @@ export async function initializeDistributorInventory(distributorId, inventoryDat
   if (!persistLocally()) {
     if (!(await hasAdminAccess())) throw new Error('Only an administrator can initialize distributor inventory.');
     await setDoc(doc(db, 'inventory', distributorId), payload);
+    invalidatePageDataCache();
     return payload;
   }
   return updateDistributorInventory(distributorId, payload);
@@ -630,6 +706,7 @@ export async function updateDistributorInventory(distributorId, inventoryData) {
   const allInventory = JSON.parse(localStorage.getItem(STORAGE_KEYS.INVENTORY) || '{}');
   allInventory[distributorId] = payload;
   localStorage.setItem(STORAGE_KEYS.INVENTORY, JSON.stringify(allInventory));
+  invalidatePageDataCache();
   return payload;
 }
 
@@ -641,7 +718,7 @@ export async function addDistributorStock(distributorId, cylinderType, quantity)
 
   if (!persistLocally()) {
     const inventoryRef = doc(db, 'inventory', distributorId);
-    return runTransaction(db, async tx => {
+    const result = await runTransaction(db, async tx => {
       const snap = await tx.get(inventoryRef);
       const current = snap.exists() ? snap.data() : {
         distributorId,
@@ -670,6 +747,8 @@ export async function addDistributorStock(distributorId, cylinderType, quantity)
       else tx.set(inventoryRef, payload);
       return payload;
     });
+    invalidatePageDataCache();
+    return result;
   }
 
   const inventory = await getDistributorInventory(distributorId);
@@ -698,7 +777,7 @@ export async function createDemoPaymentIntent({ bookingId, customerId, amount, c
 }
 
 export async function confirmDemoPaymentFromLink({ bookingId, confirmationId, token }) {
-  if (persistLocally()) throw new Error('This payment link requires the live GasBridge demo project.');
+  if (persistLocally()) throw new Error('This payment link requires the live GasBridge Firebase project.');
   if (!bookingId || !confirmationId || !token) throw new Error('This payment link is incomplete. Start payment again from LPG booking.');
   await setDoc(doc(db, 'demoPaymentConfirmations', bookingId), {
     bookingId,
@@ -747,7 +826,7 @@ export async function createBooking(bookingData) {
     createdAt: bookingData.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     statusTimeline: bookingData.statusTimeline || (bookingData.paymentStatus === 'paid'
-      ? [{ status: "confirmed", time: new Date().toISOString(), note: "Demo payment confirmed." }]
+      ? [{ status: "confirmed", time: new Date().toISOString(), note: `${bookingData.paymentMethod === 'card' ? 'Card' : 'UPI'} payment confirmed.` }]
       : [])
   };
 
@@ -762,7 +841,7 @@ export async function createBooking(bookingData) {
   if (!persistLocally() && fullBooking.paymentStatus === 'paid') {
       const bookingRef = doc(db, 'bookings', bookingId);
       const inventoryRef = doc(db, 'inventory', fullBooking.distributorId);
-      await runTransaction(db, async tx => {
+    await runTransaction(db, async tx => {
       const current = await tx.get(bookingRef);
       const inventorySnap = await tx.get(inventoryRef);
       if (!current.exists() || current.data().paymentStatus !== 'unpaid' || current.data().bookingStatus !== 'pending_payment') {
@@ -804,6 +883,7 @@ export async function createBooking(bookingData) {
         }
       });
     });
+    invalidatePageDataCache();
     return fullBooking;
   }
   if (!persistLocally()) {
@@ -819,6 +899,7 @@ export async function createBooking(bookingData) {
     bookings.unshift(fullBooking);
   }
   localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(bookings));
+  invalidatePageDataCache();
 
   // Deduct inventory stock for the appropriate cylinder type (Rule 27)
   // Reserve stock only after payment has been confirmed, through the payment completion path.
@@ -889,26 +970,26 @@ export async function findAndAssignEligibleAgent(booking) {
 }
 
 export async function getBookings(filter = {}) {
-  let all = [];
-  if (!isDemo && db) {
-    try {
-      const currentUser = isCurrentAdmin() ? { role: 'admin' } : await getUserProfile(auth.currentUser?.uid || '');
-      let bookingQuery = collection(db, 'bookings');
-      if (currentUser?.role === 'customer') bookingQuery = query(bookingQuery, where('customerId', '==', auth.currentUser.uid));
-      else if (currentUser?.role === 'agent') bookingQuery = query(bookingQuery, where('deliveryAgentId', '==', currentUser.agentId));
-      else if (currentUser?.role === 'distributor') bookingQuery = query(bookingQuery, where('distributorId', '==', currentUser.distributorId));
-      else if (currentUser?.role !== 'admin') return [];
-      const snap = await getDocs(bookingQuery);
-      all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    } catch (e) {
-      console.warn("Firestore error reading bookings:", e);
-      throw e;
+  const all = await cachedPageData('bookings:authorized', async () => {
+    let records = [];
+    if (!isDemo && db) {
+      try {
+        const currentUser = isCurrentAdmin() ? { role: 'admin' } : await getUserProfile(auth.currentUser?.uid || '');
+        let bookingQuery = collection(db, 'bookings');
+        if (currentUser?.role === 'customer') bookingQuery = query(bookingQuery, where('customerId', '==', auth.currentUser.uid));
+        else if (currentUser?.role === 'agent') bookingQuery = query(bookingQuery, where('deliveryAgentId', '==', currentUser.agentId));
+        else if (currentUser?.role === 'distributor') bookingQuery = query(bookingQuery, where('distributorId', '==', currentUser.distributorId));
+        else if (currentUser?.role !== 'admin') return [];
+        const snap = await getDocs(bookingQuery);
+        records = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      } catch (e) {
+        console.warn("Firestore error reading bookings:", e);
+        throw e;
+      }
     }
-    if (all.length === 0) return [];
-  }
-  if (all.length === 0 && persistLocally()) {
-    all = JSON.parse(localStorage.getItem(STORAGE_KEYS.BOOKINGS) || '[]');
-  }
+    if (records.length === 0 && persistLocally()) records = JSON.parse(localStorage.getItem(STORAGE_KEYS.BOOKINGS) || '[]');
+    return records;
+  }, 60000);
 
   return all.filter(b => {
     if (filter.customerId && b.customerId !== filter.customerId) return false;
@@ -923,19 +1004,20 @@ export async function getBookings(filter = {}) {
 }
 
 export async function getBookingById(bookingId) {
-  if (!isDemo && db) {
-    try {
-      const snap = await getDoc(doc(db, "bookings", bookingId));
-      if (snap.exists()) {
-        return snap.data();
+  return cachedPageData(`booking:${bookingId}`, async () => {
+    if (!isDemo && db) {
+      try {
+        const snap = await getDoc(doc(db, "bookings", bookingId));
+        if (snap.exists()) return snap.data();
+      } catch (e) {
+        console.warn("Firestore booking read error:", e);
+        throw e;
       }
-    } catch (e) {
-      console.warn("Firestore booking read error:", e);
     }
-  }
-  if (!persistLocally()) return null;
-  const bookings = JSON.parse(localStorage.getItem(STORAGE_KEYS.BOOKINGS) || '[]');
-  return bookings.find(b => b.bookingId === bookingId) || null;
+    if (!persistLocally()) return null;
+    const bookings = JSON.parse(localStorage.getItem(STORAGE_KEYS.BOOKINGS) || '[]');
+    return bookings.find(b => b.bookingId === bookingId) || null;
+  }, 30000);
 }
 
 export async function updateBookingRecord(bookingId, updates) {
@@ -997,6 +1079,7 @@ export async function updateBookingRecord(bookingId, updates) {
     }
     bookings[idx] = { ...bookings[idx], ...cleanUpdates };
     localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(bookings));
+    invalidatePageDataCache();
     return bookings[idx];
   }
   return null;
@@ -1122,29 +1205,32 @@ export async function savePaymentRecord(paymentData) {
   }
   payments.unshift(cleanPayment);
   localStorage.setItem(STORAGE_KEYS.PAYMENTS, JSON.stringify(payments));
+  invalidatePageDataCache();
   return cleanPayment;
 }
 
 export async function getPaymentByBookingId(bookingId) {
-  if (!isDemo && db) {
-    try {
-      const currentUid = auth?.currentUser?.uid;
-      if (!currentUid) return null;
-      // Payment document IDs are transaction references, not booking IDs.
-      // Query only the signed-in customer's rows so Firestore rules can prove
-      // the read is authorized; do not probe a missing payments/{bookingId}.
-      const q = query(collection(db, "payments"), where("customerId", "==", currentUid));
-      const snap = await getDocs(q);
-      const match = snap.docs.find(payment => payment.data().bookingId === bookingId);
-      if (match) return match.data();
-    } catch (e) {
-      console.warn("Firestore error getting payment by booking:", e);
-      throw e;
+  return cachedPageData(`payment:${bookingId}`, async () => {
+    if (!isDemo && db) {
+      try {
+        const currentUid = auth?.currentUser?.uid;
+        if (!currentUid) return null;
+        // Payment document IDs are transaction references, not booking IDs.
+        // Query only the signed-in customer's rows so Firestore rules can prove
+        // the read is authorized; do not probe a missing payments/{bookingId}.
+        const q = query(collection(db, "payments"), where("customerId", "==", currentUid));
+        const snap = await getDocs(q);
+        const match = snap.docs.find(payment => payment.data().bookingId === bookingId);
+        if (match) return match.data();
+      } catch (e) {
+        console.warn("Firestore error getting payment by booking:", e);
+        throw e;
+      }
     }
-  }
-  if (!persistLocally()) return null;
-  const payments = JSON.parse(localStorage.getItem(STORAGE_KEYS.PAYMENTS) || '[]');
-  return payments.find(p => p.bookingId === bookingId) || null;
+    if (!persistLocally()) return null;
+    const payments = JSON.parse(localStorage.getItem(STORAGE_KEYS.PAYMENTS) || '[]');
+    return payments.find(p => p.bookingId === bookingId) || null;
+  }, 30000);
 }
 
 /* ==========================================================================
@@ -1176,28 +1262,57 @@ export async function createNotification(recipientUserId, role, title, message, 
   const notifications = JSON.parse(localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS) || '[]');
   notifications.unshift(notif);
   localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifications));
+  invalidatePageDataCache();
   return notif;
 }
 
 export async function getNotifications(recipientUserId, role = null) {
-  let all = [];
-  if (!isDemo && db) {
-    const currentUid = auth.currentUser?.uid;
-    if (!currentUid) return [];
-    const queries = [query(collection(db, "notifications"), where("recipientUserId", "==", currentUid))];
-    if (isCurrentAdmin()) queries.push(query(collection(db, "notifications"), where("recipientUserId", "==", ADMIN_CONFIG.email)));
-    const snapshots = await Promise.all(queries.map(notificationQuery => getDocs(notificationQuery)));
-    all = snapshots.flatMap(snap => snap.docs.map(d => ({ id: d.id, ...d.data() })));
-  }
-  if (all.length === 0 && persistLocally()) {
-    all = JSON.parse(localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS) || '[]');
-  }
+  const all = await cachedPageData('notifications:current', async () => {
+    let records = [];
+    if (!isDemo && db) {
+      const currentUid = auth.currentUser?.uid;
+      if (!currentUid) return [];
+      const queries = [query(collection(db, "notifications"), where("recipientUserId", "==", currentUid))];
+      if (isCurrentAdmin()) queries.push(query(collection(db, "notifications"), where("recipientUserId", "==", ADMIN_CONFIG.email)));
+      const snapshots = await Promise.all(queries.map(notificationQuery => getDocs(notificationQuery)));
+      records = snapshots.flatMap(snap => snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }
+    if (records.length === 0 && persistLocally()) records = JSON.parse(localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS) || '[]');
+    return records;
+  }, 10000);
 
   return all.filter(n => {
+    if (n.channel && n.channel !== 'in_app') return false;
     if (n.recipientUserId === recipientUserId || n.recipientId === recipientUserId ||
         (isCurrentAdmin() && n.recipientUserId === ADMIN_CONFIG.email)) return true;
     return false;
   }).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+}
+
+export function subscribeToNotifications(recipientUserId, onUpdate, onError = () => {}) {
+  if (persistLocally()) return null;
+  const currentUid = auth?.currentUser?.uid;
+  if (!currentUid) return null;
+
+  const notificationQueries = [query(collection(db, 'notifications'), where('recipientUserId', '==', currentUid))];
+  if (isCurrentAdmin()) {
+    notificationQueries.push(query(collection(db, 'notifications'), where('recipientUserId', '==', ADMIN_CONFIG.email)));
+  }
+  const snapshotsByQuery = new Map();
+  const publish = () => {
+    const all = [...snapshotsByQuery.values()].flat();
+    const unique = [...new Map(all.map(item => [item.id, item])).values()];
+    const visible = unique.filter(item => (!item.channel || item.channel === 'in_app') &&
+      (item.recipientUserId === recipientUserId || item.recipientId === recipientUserId ||
+       (isCurrentAdmin() && item.recipientUserId === ADMIN_CONFIG.email)));
+    onUpdate(visible.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+  };
+
+  const unsubscribeAll = notificationQueries.map((notificationQuery, index) => onSnapshot(notificationQuery, snapshot => {
+    snapshotsByQuery.set(index, snapshot.docs.map(item => ({ id: item.id, ...item.data() })));
+    publish();
+  }, onError));
+  return () => unsubscribeAll.forEach(unsubscribe => unsubscribe());
 }
 
 export async function markNotificationRead(notifId) {
@@ -1209,6 +1324,7 @@ export async function markNotificationRead(notifId) {
   if (item) {
     item.read = true;
     localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(list));
+    invalidatePageDataCache();
   }
 }
 
@@ -1237,12 +1353,14 @@ export async function logAuditEvent(actorUserId, actorRole, action, targetUserId
 }
 
 export async function getAuditLogs() {
-  if (!isDemo && db) {
-    if (!(await hasAdminAccess())) return [];
-    const snap = await getDocs(collection(db, "auditLogs"));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-  }
-  return JSON.parse(localStorage.getItem(STORAGE_KEYS.AUDIT_LOGS) || '[]');
+  return cachedPageData('admin:auditLogs', async () => {
+    if (!isDemo && db) {
+      if (!(await hasAdminAccess())) return [];
+      const snap = await getDocs(collection(db, "auditLogs"));
+      return snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    }
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.AUDIT_LOGS) || '[]');
+  }, 60000);
 }
 
 /* ==========================================================================
@@ -1252,15 +1370,17 @@ export async function getAuditLogs() {
    ========================================================================== */
 
 export async function getAllCustomers() {
-  if (!isDemo && db) {
-    try {
-      if (!(await hasAdminAccess())) return [];
-      const snap = await getDocs(collection(db, "customers"));
-      return snap.docs.map(d => ({ uid: d.id, ...d.data() }));
-    } catch (e) { throw e; }
-  }
-  if (!persistLocally()) return [];
-  return JSON.parse(localStorage.getItem(STORAGE_KEYS.CUSTOMERS) || '[]');
+  return cachedPageData('admin:customers', async () => {
+    if (!isDemo && db) {
+      try {
+        if (!(await hasAdminAccess())) return [];
+        const snap = await getDocs(collection(db, "customers"));
+        return snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+      } catch (e) { throw e; }
+    }
+    if (!persistLocally()) return [];
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.CUSTOMERS) || '[]');
+  }, 60000);
 }
 
 export async function getPendingCustomers() {
@@ -1505,10 +1625,14 @@ export async function rejectCustomer(customerId, reason = "Address verification 
 }
 
 export async function getPendingDistributorCustomers(distributorId = null) {
-  let custs = await getAllCustomers();
+  let custs;
   if (!persistLocally() && distributorId) {
-    const snap = await getDocs(query(collection(db, 'customers'), where('distributorId', '==', distributorId)));
-    custs = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+    custs = await cachedPageData(`customers:distributor:${distributorId}`, async () => {
+      const snap = await getDocs(query(collection(db, 'customers'), where('distributorId', '==', distributorId)));
+      return snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+    }, 60000);
+  } else {
+    custs = await getAllCustomers();
   }
   return custs.filter(c => {
     const isPending = c.status === "pending" || c.approvalStatus === "pending";
@@ -1519,10 +1643,14 @@ export async function getPendingDistributorCustomers(distributorId = null) {
 }
 
 export async function getDistributorCustomers(distributorId = null) {
-  let custs = await getAllCustomers();
+  let custs;
   if (!persistLocally() && distributorId) {
-    const snap = await getDocs(query(collection(db, 'customers'), where('distributorId', '==', distributorId)));
-    custs = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+    custs = await cachedPageData(`customers:distributor:${distributorId}`, async () => {
+      const snap = await getDocs(query(collection(db, 'customers'), where('distributorId', '==', distributorId)));
+      return snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+    }, 60000);
+  } else {
+    custs = await getAllCustomers();
   }
   if (!distributorId) return custs;
   return custs.filter(c => c.distributorId === distributorId);

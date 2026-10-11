@@ -25,7 +25,7 @@ export async function initTrackingPage() {
 
   // If no ID in URL, fetch customer's latest booking
   if (!bookingId) {
-    const customerBookings = await getBookings({ customerId: user.uid });
+    const customerBookings = await getBookings({ customerId: user.uid, paymentStatus: ['paid', 'cod_pending'] });
     if (customerBookings.length > 0) {
       bookingId = customerBookings[0].bookingId;
     }
@@ -83,9 +83,9 @@ async function loadAndRenderTracking(bookingId, isSilentRefresh = false) {
           <div style="font-size: 0.85rem; color: var(--text-muted);">Quantity: ${booking.quantity}</div>
         </div>
         <div>
-          <span style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 0.25rem;">Amount Paid</span>
+          <span style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 0.25rem;">${booking.paymentStatus === 'cod_pending' ? 'Amount Due on Delivery' : 'Amount Paid'}</span>
           <strong style="font-size: 1.15rem; color: var(--primary); font-family: 'Outfit', sans-serif;">${formatCurrency(booking.totalAmount)}</strong>
-          <div style="font-size: 0.85rem; color: var(--success); font-weight: 600;">✓ Demo Payment Verified</div>
+          <div style="font-size: 0.85rem; color: ${booking.paymentStatus === 'cod_pending' ? 'var(--warning)' : 'var(--success)'}; font-weight: 600;">${booking.paymentStatus === 'cod_pending' ? 'Cash payment due at delivery' : '✓ Payment confirmed'}</div>
         </div>
         <div>
           <span style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 0.25rem;">Authorized Distributor</span>

@@ -28,7 +28,11 @@ export async function initCustomerDashboard() {
   }
 
   // 2. Fetch fresh profile
-  const profile = await getCustomerProfile(user.uid) || user;
+  const [loadedProfile, customerBookings] = await Promise.all([
+    getCustomerProfile(user.uid),
+    getBookings({ customerId: user.uid, paymentStatus: ['paid', 'cod_pending'] })
+  ]);
+  const profile = loadedProfile || user;
 
   // 3. Populate Fixed Home Address Card
   const addressCard = document.getElementById('customer-address-box');
@@ -52,7 +56,6 @@ export async function initCustomerDashboard() {
   if (distEl) distEl.textContent = profile.distributorName || "Authorized GasBridge Distributor";
 
   // 4. Load Active/Latest Booking
-  const customerBookings = await getBookings({ customerId: user.uid, paymentStatus: ['paid', 'cod_pending'] });
   const activeBooking = customerBookings.find(b => b.bookingStatus !== 'delivered' && b.bookingStatus !== 'cancelled') || customerBookings[0];
 
   const currentOrderCard = document.getElementById('current-order-card');

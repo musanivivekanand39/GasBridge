@@ -62,8 +62,8 @@ export async function initBookingPage() {
   document.querySelectorAll('input[name="payment-method"]').forEach(input => {
     input.addEventListener('change', () => {
       const hints = {
-        upi_qr: 'UPI checkout uses a QR code. This project runs test payments only; no real money is charged.',
-        card: 'Card checkout is simulated for this project. Do not enter real card details.',
+        upi_qr: 'UPI QR checkout is simulated. No real money is charged.',
+        card: 'Card checkout is simulated. Do not enter real card details.',
         cod: 'Pay the delivery agent in cash when your cylinder arrives. No online payment is taken now.'
       };
       if (paymentMethodHint) paymentMethodHint.textContent = hints[input.value];
@@ -81,14 +81,14 @@ export async function initBookingPage() {
       } catch (error) {
         showToast("Inventory Check Failed", error.message || "Could not check distributor stock.", "error");
         proceedBtn.disabled = false;
-        proceedBtn.textContent = "Proceed to Demo Payment \u2192";
+        proceedBtn.textContent = "Continue to payment \u2192";
         return;
       }
 
       if (!isAvailable) {
         showToast("Stock Unavailable", `LPG ${selectedCylinderType} cylinders are currently unavailable at your distributor depot.`, "error");
         proceedBtn.disabled = false;
-        proceedBtn.textContent = "Proceed to Demo Payment \u2192";
+        proceedBtn.textContent = "Continue to payment \u2192";
         return;
       }
 
@@ -96,7 +96,7 @@ export async function initBookingPage() {
       const totalAmount = cylinderMeta.price * selectedQuantity;
       const paymentMethod = document.querySelector('input[name="payment-method"]:checked')?.value || 'upi_qr';
 
-      // Open Demo Payment Modal
+      // Open the checkout modal
       await openDemoPaymentModal({
         customer: currentCustomer,
         cylinderType: selectedCylinderType,
@@ -108,7 +108,7 @@ export async function initBookingPage() {
       });
 
       proceedBtn.disabled = false;
-      proceedBtn.textContent = "Proceed to Demo Payment \u2192";
+      proceedBtn.textContent = "Continue to payment \u2192";
     });
   }
 
@@ -124,11 +124,11 @@ function renderConnectionCard() {
   const priceEl = document.getElementById('connection-price');
 
   if (badgeEl) {
-    badgeEl.textContent = `${meta.name} (${meta.weight})`;
+    badgeEl.textContent = `${meta.shortName} · ${meta.weight}`;
     badgeEl.className = `connection-badge ${selectedCylinderType}`;
   }
   if (titleEl) {
-    titleEl.textContent = `${meta.name} (${meta.weight})`;
+    titleEl.textContent = `${meta.shortName} Cylinder (${meta.weight})`;
   }
   if (descEl) {
     descEl.textContent = meta.description || (selectedCylinderType === 'commercial' 

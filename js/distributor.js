@@ -46,9 +46,15 @@ export async function initDistributorDashboard() {
 
   const distributorId = resolveDistributorId(user);
 
-  const [distributor, serviceAreas] = await Promise.all([
+  const [distributor, serviceAreas, bookings, inventory, agents, pendingAgents, pendingCustomers, allCustomers] = await Promise.all([
     getDistributorById(distributorId),
-    getServiceAreas()
+    getServiceAreas(),
+    getBookings({ distributorId, paymentStatus: ['paid', 'cod_pending'] }),
+    getDistributorInventory(distributorId),
+    getDeliveryAgents(distributorId),
+    getPendingDeliveryAgents(distributorId),
+    getPendingDistributorCustomers(distributorId),
+    getDistributorCustomers(distributorId)
   ]);
   const assignedAreas = serviceAreas.filter(area => area.distributorId === distributorId);
   const registeredPins = normalizePincodes(distributor?.pincodes);
@@ -69,20 +75,6 @@ export async function initDistributorDashboard() {
     areaStatusEl.textContent = ['approved', 'active'].includes(status) && distributor?.active !== false ? 'Active & Serving' : status || 'Status unavailable';
     areaStatusEl.className = `badge ${['approved', 'active'].includes(status) && distributor?.active !== false ? 'badge-success' : 'badge-warning'}`;
   }
-
-  // 1. Fetch bookings strictly for this distributor
-  const bookings = await getBookings({ distributorId, paymentStatus: ['paid', 'cod_pending'] });
-
-  // 2. Fetch inventory
-  const inventory = await getDistributorInventory(distributorId);
-
-  // 3. Fetch agents, customers, and pending requests
-  const [agents, pendingAgents, pendingCustomers, allCustomers] = await Promise.all([
-    getDeliveryAgents(distributorId),
-    getPendingDeliveryAgents(distributorId),
-    getPendingDistributorCustomers(distributorId),
-    getDistributorCustomers(distributorId)
-  ]);
 
   // Calculate KPIs
   const todayStr = new Date().toISOString().split('T')[0];

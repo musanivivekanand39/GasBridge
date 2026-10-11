@@ -11,7 +11,8 @@ import { getCurrentUser } from "./auth.js";
 import { 
   getNotifications, 
   markNotificationRead, 
-  createNotification 
+  createNotification,
+  subscribeToNotifications
 } from "./firestore.js";
 import { formatDateTime, escapeHTML, showToast } from "./utils.js";
 
@@ -35,11 +36,10 @@ export async function sendApprovalNotification({
   message,
   link = ""
 }) {
-  const timestamp = new Date().toISOString();
   const results = {
     inApp: false,
-    smsStatus: "unconfigured",
-    emailStatus: "unconfigured"
+    smsStatus: "not_configured",
+    emailStatus: "not_configured"
   };
 
   // 1. Always record in-app notification in Firestore / storage
@@ -58,61 +58,10 @@ export async function sendApprovalNotification({
     console.warn("Error creating in-app notification:", err);
   }
 
-  // 2. Preferred: SMS Notification
-  if (NOTIFICATION_CONFIG.smsProviderConfigured && recipientMobile) {
-    results.smsStatus = "SMS Provider Integration Required";
-    await createNotification(
-      recipientUserId,
-      recipientRole,
-      title,
-      message,
-      link,
-      "sms",
-      "pending",
-      "SMS provider is marked configured but no sending integration exists."
-    );
-  } else {
-    // Truthfully record unconfigured status - DO NOT FAKE SMS (Rule 5, 9, 15, 36, 48)
-    results.smsStatus = "SMS Provider Configuration Required";
-    await createNotification(
-      recipientUserId,
-      recipientRole,
-      title,
-      message,
-      link,
-      "sms",
-      "pending",
-      "SMS Provider Integration Required"
-    );
-  }
-
-  // 3. Secondary: Email Notification
-  if (NOTIFICATION_CONFIG.emailServiceConfigured && recipientEmail) {
-    results.emailStatus = "Email Provider Integration Required";
-    await createNotification(
-      recipientUserId,
-      recipientRole,
-      title,
-      message,
-      link,
-      "email",
-      "pending",
-      "Email provider is marked configured but no sending integration exists."
-    );
-  } else {
-    // Truthfully record unconfigured status - DO NOT FAKE EMAIL (Rule 37)
-    results.emailStatus = "Email Service Configuration Required";
-    await createNotification(
-      recipientUserId,
-      recipientRole,
-      title,
-      message,
-      link,
-      "email",
-      "pending",
-      "Email Provider Integration Required"
-    );
-  }
+  // External SMS and email are not connected. Keep the in-app inbox clear and
+  // do not create misleading pending messages for channels that are not sent.
+  if (NOTIFICATION_CONFIG.smsProviderConfigured && recipientMobile) results.smsStatus = "configured";
+  if (NOTIFICATION_CONFIG.emailServiceConfigured && recipientEmail) results.emailStatus = "configured";
 
   return results;
 }
@@ -171,16 +120,44 @@ export function initNotificationsUI() {
     await refreshNotifications(user);
   });
 
-  refreshNotifications(user);
+  let unsubscribeNotifications = null;
+  try {
+    unsubscribeNotifications = subscribeToNotifications(user.uid, notifications => {
+      refreshNotifications(user, notifications);
+    }, error => {
+      console.warn('Live notification updates are unavailable:', error);
+    });
+  } catch (error) {
+    console.warn('Could not start live notification updates:', error);
+  }
+  if (!unsubscribeNotifications) {
+    refreshNotifications(user).catch(error => {
+      console.warn('Could not load notifications:', error);
+      const listEl = document.getElementById('notif-list');
+      if (listEl) listEl.textContent = 'Notifications are temporarily unavailable.';
+    });
+  }
+  const refreshOnReturn = () => {
+    if (document.visibilityState === 'visible') {
+      refreshNotifications(user).catch(error => console.warn('Could not refresh notifications:', error));
+    }
+  };
+  window.addEventListener('focus', refreshOnReturn);
+  document.addEventListener('visibilitychange', refreshOnReturn);
+  window.addEventListener('pagehide', () => {
+    if (unsubscribeNotifications) unsubscribeNotifications();
+    window.removeEventListener('focus', refreshOnReturn);
+    document.removeEventListener('visibilitychange', refreshOnReturn);
+  }, { once: true });
 }
 
-export async function refreshNotifications(user) {
+export async function refreshNotifications(user, incomingNotifications = null) {
   if (!user) return;
   const listEl = document.getElementById('notif-list');
   const badgeEl = document.getElementById('notif-badge');
   if (!listEl || !badgeEl) return;
 
-  const notifs = await getNotifications(user.uid, user.role);
+  const notifs = incomingNotifications || await getNotifications(user.uid, user.role);
   const unreadCount = notifs.filter(n => !n.read).length;
 
   if (unreadCount > 0) {
@@ -202,7 +179,7 @@ export async function refreshNotifications(user) {
   listEl.innerHTML = notifs.slice(0, 10).map(n => {
     const isSmsPending = n.channel === 'sms' && n.status === 'pending';
     return `
-      <div class="notification-item ${n.read ? '' : 'unread'}" data-notif-id="${n.id}">
+      <div class="notification-item ${n.read ? '' : 'unread'}" data-notif-id="${escapeHTML(n.id)}" data-notif-link="${escapeHTML(n.link || '')}" role="button" tabindex="0">
         <div class="notification-item-icon">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"></circle>
@@ -223,12 +200,30 @@ export async function refreshNotifications(user) {
     `;
   }).join('');
 
-  listEl.querySelectorAll('.notification-item').forEach(item => {
-    item.addEventListener('click', async () => {
-      const id = item.dataset.notifId;
-      await markNotificationRead(id);
+  const openNotification = async item => {
+    try {
+      await markNotificationRead(item.dataset.notifId);
       item.classList.remove('unread');
-      refreshNotifications(user);
+    } catch (error) {
+      console.warn('Could not mark notification as read:', error);
+    }
+    const link = item.dataset.notifLink;
+    if (link) {
+      const destination = new URL(link, window.location.href);
+      if (destination.origin === window.location.origin) {
+        window.location.assign(destination.href);
+        return;
+      }
+    }
+    refreshNotifications(user).catch(error => console.warn('Could not refresh notifications:', error));
+  };
+  listEl.querySelectorAll('.notification-item').forEach(item => {
+    item.addEventListener('click', () => openNotification(item));
+    item.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openNotification(item);
+      }
     });
   });
 }
