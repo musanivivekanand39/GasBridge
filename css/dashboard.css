@@ -558,9 +558,11 @@
 
 .data-table td > .table-status-badge {
   display: grid !important;
-  width: fit-content;
-  max-width: 100%;
+  width: max-content;
+  max-width: none;
+  min-width: max-content;
   margin: 0 auto;
+  white-space: nowrap;
   word-break: normal;
   overflow-wrap: normal;
 }
