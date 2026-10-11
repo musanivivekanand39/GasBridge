@@ -550,19 +550,25 @@
 }
 
 .table-status-badge {
-  display: inline-grid !important;
-  max-width: 100%;
-  place-items: center;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: max-content;
+  min-width: 5.5rem;
+  max-width: none;
+  flex-wrap: nowrap;
+  white-space: nowrap !important;
   text-align: center;
 }
 
 .data-table td > .table-status-badge {
-  display: grid !important;
+  display: inline-flex !important;
   width: max-content;
-  max-width: none;
-  min-width: max-content;
+  min-width: 5.5rem;
+  max-width: none !important;
   margin: 0 auto;
-  white-space: nowrap;
+  flex-wrap: nowrap;
+  white-space: nowrap !important;
   word-break: normal;
   overflow-wrap: normal;
 }
