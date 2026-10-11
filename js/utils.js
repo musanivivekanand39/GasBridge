@@ -152,7 +152,7 @@ export function getGoogleMapsUrl(address) {
     address.state,
     address.pincode
   ].filter(Boolean);
-  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(parts.join(', '))}&travelmode=driving`;
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(parts.join(', '))}&travelmode=driving&dir_action=navigate`;
 }
 
 // Setup global modal close listeners on [data-close-modal]
