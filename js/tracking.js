@@ -5,7 +5,7 @@
 
 import { getCurrentUser } from "./auth.js";
 import { getBookingById, getBookings, getDistributors } from "./firestore.js";
-import { formatCurrency, formatDateTime, getStatusBadgeHTML, escapeHTML } from "./utils.js";
+import { formatCurrency, getStatusBadgeHTML, escapeHTML } from "./utils.js";
 
 const STEPS_ORDER = [
   'confirmed',
@@ -119,23 +119,49 @@ async function loadAndRenderTracking(bookingId, isSilentRefresh = false) {
   // 4. Render Timeline Events
   const timelineEl = document.getElementById('track-timeline-list');
   if (timelineEl) {
-    const timeline = Array.isArray(booking.statusTimeline) && booking.statusTimeline.length
-      ? booking.statusTimeline
-      : [{
-          status: booking.bookingStatus || 'confirmed',
-          time: booking.updatedAt || booking.createdAt,
-          note: 'Current order status. New milestones will appear as the distributor and delivery agent update the booking.'
-        }];
-    timelineEl.innerHTML = timeline.map(item => `
-      <div style="display: flex; gap: 1rem; margin-bottom: 1.25rem; position: relative;">
-        <div style="width: 10px; height: 10px; border-radius: 50%; background: var(--primary); margin-top: 6px; flex-shrink: 0; box-shadow: 0 0 0 4px var(--primary-light);"></div>
-        <div>
-          <strong style="text-transform: capitalize; font-size: 0.92rem; display: block;">${escapeHTML((item.status || booking.bookingStatus || 'confirmed').replace(/_/g, ' '))}</strong>
-          <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0.15rem 0;">${escapeHTML(item.note || 'Order status updated.')}</p>
-          ${item.time ? `<span style="font-size: 0.75rem; color: var(--text-light);">${formatDateTime(item.time)}</span>` : ''}
-        </div>
-      </div>
-    `).join('');
+    const timeline = Array.isArray(booking.statusTimeline) ? booking.statusTimeline : [];
+    const eventByStatus = new Map();
+    timeline.forEach(item => {
+      if (item?.status) eventByStatus.set(item.status, item);
+    });
+    if (!eventByStatus.has('confirmed')) {
+      eventByStatus.set('confirmed', { time: booking.createdAt || booking.updatedAt });
+    }
+
+    const currentIndex = STEPS_ORDER.indexOf(booking.bookingStatus);
+    const activeIndex = currentIndex >= 0 ? currentIndex : 0;
+    const milestones = [
+      { key: 'confirmed', label: 'Booking Confirmed' },
+      { key: 'processing', label: 'Processing' },
+      { key: 'agent_assigned', label: 'Agent Assigned' },
+      { key: 'picked_up', label: 'Picked Up' },
+      { key: 'out_for_delivery', label: 'Out for Delivery' },
+      { key: 'delivered', label: 'Delivered' }
+    ];
+
+    timelineEl.innerHTML = `<div class="milestone-list">${milestones.map((milestone, index) => {
+      const complete = index < activeIndex || (booking.bookingStatus === 'delivered' && index === activeIndex);
+      const active = index === activeIndex && booking.bookingStatus !== 'delivered';
+      const event = eventByStatus.get(milestone.key);
+      const badge = complete
+        ? ''
+        : active
+          ? `<span class="milestone-state milestone-state-active">In Progress</span>`
+          : `<span class="milestone-state milestone-state-pending">Pending</span>`;
+      const marker = complete
+        ? '<span class="milestone-marker milestone-marker-complete">✓</span>'
+        : `<span class="milestone-marker ${active ? 'milestone-marker-active' : ''}">${index + 1}</span>`;
+      const timestamp = event?.time
+        ? new Date(event.time).toLocaleString('sv-SE', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+        : '';
+
+      return `<div class="milestone-row ${complete ? 'is-complete' : ''} ${active ? 'is-active' : ''}">
+        ${marker}
+        <span class="milestone-label">${milestone.label}</span>
+        ${timestamp ? `<time class="milestone-time" datetime="${escapeHTML(event.time)}">${escapeHTML(timestamp)}</time>` : ''}
+        ${badge}
+      </div>`;
+    }).join('')}</div>`;
   }
 }
 
