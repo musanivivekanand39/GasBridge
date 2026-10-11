@@ -503,17 +503,26 @@
 }
 
 .customer-directory-page .table-responsive {
+  max-width: 100%;
   overflow-x: hidden;
+}
+
+.customer-directory-page .card {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .customer-directory-table {
   table-layout: fixed;
+  max-width: 100%;
 }
 
-.customer-directory-table th,
-.customer-directory-table td {
+.customer-directory-page .customer-directory-table th,
+.customer-directory-page .customer-directory-table td {
+  min-width: 0;
   overflow-wrap: anywhere;
-  white-space: normal;
+  white-space: normal !important;
 }
 
 .customer-pending-table th:nth-child(1) { width: 13%; }
