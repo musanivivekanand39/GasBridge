@@ -356,7 +356,7 @@
               <td><div style="max-width: 260px; font-size: 0.86rem;">${escapeHTML(fullAddressStr)}</div></td>
               <td><span class="badge badge-secondary">${escapeHTML(addr.pincode || c.pincode || '-')}</span></td>
               <td style="font-size: 0.82rem; color: var(--text-muted);">${formatDateTime(c.createdAt || new Date().toISOString())}</td>
-              <td><span class="badge badge-success">✓ Verified Connection</span></td>
+              <td><span class="badge badge-success table-status-badge">✓ Verified Connection</span></td>
             </tr>
           `;
         }).join('');

@@ -94,7 +94,7 @@ export function getStatusBadgeHTML(status) {
   };
 
   const item = map[status] || { label: status, class: 'badge-secondary' };
-  return `<span class="badge ${item.class}">${escapeHTML(item.label)}</span>`;
+  return `<span class="badge table-status-badge ${item.class}">${escapeHTML(item.label)}</span>`;
 }
 
 // Modal management

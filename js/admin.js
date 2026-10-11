@@ -299,7 +299,7 @@ export async function initAdminCustomersPage() {
           <td>${escapeHTML(c.mobile)}</td>
           <td>${escapeHTML(c.address ? `${c.address.houseNo}, ${c.address.street}, ${c.address.city}` : 'N/A')}</td>
           <td><span class="badge badge-info">${escapeHTML(c.address ? c.address.pincode : '')}</span></td>
-          <td><span class="badge ${c.active ? 'badge-success' : 'badge-danger'}">${c.active ? 'Active & Approved' : 'Inactive'}</span></td>
+          <td><span class="badge table-status-badge ${c.active ? 'badge-success' : 'badge-danger'}">${c.active ? 'Active & Approved' : 'Inactive'}</span></td>
           <td>
             <button class="btn btn-outline btn-sm toggle-cust-btn" data-id="${c.uid}">
               ${c.active ? 'Deactivate' : 'Activate'}

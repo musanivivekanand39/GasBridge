@@ -354,7 +354,7 @@
                   <td>${escapeHTML(dist ? dist.name : 'Depot')}</td>
                   <td>${escapeHTML(sa ? sa.name : 'Service Area')}</td>
                   <td>
-                    <span class="badge ${a.status === 'available' ? 'badge-success' : 'badge-warning'}">
+                    <span class="badge table-status-badge ${a.status === 'available' ? 'badge-success' : 'badge-warning'}">
                       ${a.status.toUpperCase()}
                     </span>
                   </td>

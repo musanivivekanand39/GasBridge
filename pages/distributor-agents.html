@@ -339,11 +339,11 @@
             <td><span class="badge badge-info">${escapeHTML(a.vehicleNumber || 'Van')}</span></td>
             <td>${(Array.isArray(a.pincodes) ? a.pincodes : (a.pincode ? [a.pincode] : [])).map(p => `<span class="badge badge-secondary" style="margin-right: 3px;">${escapeHTML(p)}</span>`).join('') || '-'}</td>
             <td>
-              <span class="badge ${a.dutyStatus === 'available' ? 'badge-success' : (a.dutyStatus === 'busy' ? 'badge-warning' : 'badge-danger')}">
+              <span class="badge table-status-badge ${a.dutyStatus === 'available' ? 'badge-success' : (a.dutyStatus === 'busy' ? 'badge-warning' : 'badge-danger')}">
                 ${escapeHTML(String(a.dutyStatus || 'offline').toUpperCase())}
               </span>
             </td>
-            <td><span class="badge badge-success">Active &amp; Authorized</span></td>
+            <td><span class="badge badge-success table-status-badge">Active &amp; Authorized</span></td>
           </tr>
         `).join('');
         } catch (err) {

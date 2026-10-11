@@ -549,16 +549,17 @@
   white-space: normal !important;
 }
 
-.admin-active-distributors-table th:last-child,
-.admin-active-distributors-table td:last-child {
+.table-status-badge {
+  display: inline-grid !important;
+  max-width: 100%;
+  place-items: center;
   text-align: center;
 }
 
-.admin-active-distributors-table td:last-child .badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
+.data-table td > .table-status-badge {
+  display: grid !important;
+  width: fit-content;
+  margin: 0 auto;
 }
 
 .dashboard-two-column-grid {

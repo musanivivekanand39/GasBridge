@@ -248,7 +248,7 @@
                 <td style="font-size: 0.85rem; max-width: 180px;">${escapeHTML(d.address || '-')}</td>
                 <td><span class="badge badge-info">${escapeHTML(d.pincode || '-')}</span></td>
                 <td style="font-size: 0.82rem;">${formatDateTime(d.createdAt)}</td>
-                <td><span class="badge badge-warning">Pending</span></td>
+                  <td><span class="badge badge-warning table-status-badge">Pending</span></td>
                 <td style="text-align: right; white-space: nowrap;">
                   <button class="btn btn-sm btn-outline btn-view-dist" data-id="${escapeHTML(d.id)}" style="margin-right: 0.25rem; font-weight: 600;">
                     View
@@ -368,7 +368,7 @@
                 <div style="font-size: 0.8rem; color: var(--text-muted);">${escapeHTML(d.mobile)}</div>
               </td>
               <td style="font-size: 0.85rem;">${escapeHTML(d.address)}</td>
-              <td><span class="badge badge-success">Active &amp; Approved</span></td>
+              <td><span class="badge badge-success table-status-badge">Active &amp; Approved</span></td>
             </tr>
           `).join('');
         }
