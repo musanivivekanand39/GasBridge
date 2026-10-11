@@ -220,7 +220,7 @@ function renderStepper(currentStatus) {
 
   stepperContainer.innerHTML = `
     <div class="tracking-stepper">
-      <div class="tracking-progress-bar" style="width: ${progressPercent}%;"></div>
+      <div class="tracking-progress-bar" style="--progress: ${progressPercent / 100};"></div>
       ${stepsMeta.map((s, idx) => {
         let nodeClass = '';
         if (idx < activeIdx) nodeClass = 'completed';

@@ -746,15 +746,20 @@
   position: absolute;
   top: 20px;
   left: 3rem;
+  right: 3rem;
   height: 4px;
   background-color: var(--primary);
   z-index: 2;
-  transition: width 0.4s ease;
+  transform: scaleX(var(--progress, 0));
+  transform-origin: left center;
+  transition: transform 0.4s ease;
 }
 
 .tracking-stepper-cancelled .tracking-progress-bar {
   left: 25%;
+  right: auto;
   width: 50% !important;
+  transform: none;
   background: var(--danger);
 }
 
