@@ -82,6 +82,29 @@ async function loadAndRenderTracking(bookingId, isSilentRefresh = false) {
   const detailsEl = document.getElementById('track-order-details');
   if (detailsEl) {
     const a = booking.deliveryAddress || {};
+    const isRefunded = booking.paymentStatus === 'refunded' && booking.refundStatus === 'simulated_refunded';
+    const paymentHeading = isRefunded
+      ? 'Simulated Refund Amount'
+      : booking.paymentStatus === 'cod_pending'
+        ? 'Amount Due on Delivery'
+        : booking.paymentStatus === 'paid'
+          ? 'Amount Paid'
+          : 'Payment Status';
+    const paymentDescription = isRefunded
+      ? 'Simulated refund recorded - no real money moved'
+      : booking.paymentStatus === 'cod_pending'
+        ? 'Cash payment due at delivery'
+        : booking.paymentStatus === 'paid'
+          ? 'Payment confirmed'
+          : booking.bookingStatus === 'cancelled'
+            ? 'Order cancelled - no payment collected'
+            : 'Payment pending';
+    const paymentDescriptionColor = isRefunded || booking.paymentStatus === 'cod_pending'
+      ? 'var(--warning)'
+      : booking.paymentStatus === 'paid'
+        ? 'var(--success)'
+        : 'var(--text-muted)';
+    const displayedPaymentAmount = isRefunded ? booking.refundAmount : booking.totalAmount;
     detailsEl.innerHTML = `
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem;">
         <div>
@@ -90,9 +113,9 @@ async function loadAndRenderTracking(bookingId, isSilentRefresh = false) {
           <div style="font-size: 0.85rem; color: var(--text-muted);">Quantity: ${booking.quantity}</div>
         </div>
         <div>
-          <span style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 0.25rem;">${booking.paymentStatus === 'cod_pending' ? 'Amount Due on Delivery' : 'Amount Paid'}</span>
-          <strong style="font-size: 1.15rem; color: var(--primary); font-family: 'Outfit', sans-serif;">${formatCurrency(booking.totalAmount)}</strong>
-          <div style="font-size: 0.85rem; color: ${booking.paymentStatus === 'cod_pending' ? 'var(--warning)' : 'var(--success)'}; font-weight: 600;">${booking.paymentStatus === 'cod_pending' ? 'Cash payment due at delivery' : '✓ Payment confirmed'}</div>
+          <span style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 0.25rem;">${paymentHeading}</span>
+          <strong style="font-size: 1.15rem; color: var(--primary); font-family: 'Outfit', sans-serif;">${formatCurrency(displayedPaymentAmount)}</strong>
+          <div style="font-size: 0.85rem; color: ${paymentDescriptionColor}; font-weight: 600;">${paymentDescription}</div>
         </div>
         <div>
           <span style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; font-weight: 700; display: block; margin-bottom: 0.25rem;">Authorized Distributor</span>

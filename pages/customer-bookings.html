@@ -135,7 +135,7 @@
 
       async function loadBookings() {
         const [bookings, distributors] = await Promise.all([
-          getBookings({ customerId: user.uid, paymentStatus: ['paid', 'cod_pending'] }),
+          getBookings({ customerId: user.uid, paymentStatus: ['paid', 'cod_pending', 'refunded'] }),
           getDistributors()
         ]);
 

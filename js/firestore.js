@@ -1052,7 +1052,7 @@ export async function getBookingById(bookingId) {
     if (!persistLocally()) return null;
     const bookings = JSON.parse(localStorage.getItem(STORAGE_KEYS.BOOKINGS) || '[]');
     return bookings.find(b => b.bookingId === bookingId) || null;
-  }, 30000);
+  }, 5000);
 }
 
 export async function updateBookingRecord(bookingId, updates) {
@@ -1090,6 +1090,7 @@ export async function updateBookingRecord(bookingId, updates) {
           updatedAt: cleanUpdates.updatedAt
         });
       }));
+      invalidatePageDataCache();
       return { ...existing, ...cleanUpdates };
     }
     if (Object.prototype.hasOwnProperty.call(updates, 'deliveryAgentId')) {
@@ -1103,6 +1104,7 @@ export async function updateBookingRecord(bookingId, updates) {
       cleanUpdates.deliveryAgentVehicleNumber = agent.vehicleNumber || '';
     }
     await requireLiveWrite(() => updateDoc(doc(db, "bookings", bookingId), cleanUpdates));
+    invalidatePageDataCache();
     return { bookingId, ...cleanUpdates };
   }
 
@@ -1149,9 +1151,10 @@ export async function updateBookingStatus(bookingId, newStatus, note = "", actor
   }
 
   const timeline = booking.statusTimeline || [];
+  const statusUpdatedAt = new Date().toISOString();
   timeline.push({
     status: newStatus,
-    time: new Date().toISOString(),
+    time: statusUpdatedAt,
     note: note || `Status updated to ${newStatus}`
   });
 
@@ -1159,6 +1162,13 @@ export async function updateBookingStatus(bookingId, newStatus, note = "", actor
     bookingStatus: newStatus,
     statusTimeline: timeline
   };
+  const simulatedRefund = adminCancellation && booking.paymentStatus === 'paid';
+  if (simulatedRefund) {
+    updates.paymentStatus = 'refunded';
+    updates.refundStatus = 'simulated_refunded';
+    updates.refundAmount = Number(booking.totalAmount || 0);
+    updates.refundedAt = statusUpdatedAt;
+  }
   if (newStatus === 'delivered' && booking.paymentStatus === 'cod_pending') {
     updates.paymentStatus = 'paid';
   }
@@ -1208,13 +1218,17 @@ export async function updateBookingStatus(bookingId, newStatus, note = "", actor
     cancelled: "Booking Cancelled"
   };
 
+  const notificationTitle = simulatedRefund ? 'Simulated refund recorded' : statusLabels[newStatus] || 'Order Status Update';
+  const notificationMessage = simulatedRefund
+    ? `Booking ${bookingId} was cancelled. A simulated refund of INR ${Number(booking.totalAmount || 0).toLocaleString('en-IN')} has been recorded. This demo does not move real money.`
+    : `Booking ${bookingId}: ${note || `Delivery status is now ${newStatus.replace(/_/g, ' ')}.`}`;
   await createNotification(
     booking.customerId,
     "customer",
-    statusLabels[newStatus] || "Order Status Update",
-    `Booking ${bookingId}: ${note || `Delivery status is now ${newStatus.replace(/_/g, ' ')}.`}`,
+    notificationTitle,
+    notificationMessage,
     `customer-tracking.html?id=${bookingId}`,
-    'in_app', 'sent', null, { bookingId }
+    'in_app', 'sent', null, { bookingId, ...(simulatedRefund ? { refundStatus: 'simulated_refunded', refundAmount: Number(booking.totalAmount || 0) } : {}) }
   );
 
   await logAuditEvent(
