@@ -559,7 +559,20 @@
 .data-table td > .table-status-badge {
   display: grid !important;
   width: fit-content;
+  max-width: 100%;
   margin: 0 auto;
+  overflow-wrap: anywhere;
+}
+
+.data-table td > .badge:only-child:not(.table-status-badge) {
+  display: grid;
+  width: fit-content;
+  max-width: 100%;
+  margin-inline: auto;
+  place-items: center;
+  overflow-wrap: anywhere;
+  text-align: center;
+  white-space: normal;
 }
 
 .dashboard-two-column-grid {
