@@ -550,27 +550,35 @@
 }
 
 .table-status-badge {
-  display: inline-flex !important;
-  align-items: center;
-  justify-content: center;
-  width: max-content;
-  min-width: 5.5rem;
-  max-width: none;
-  flex-wrap: nowrap;
+  display: inline-block !important;
+  width: auto !important;
+  min-width: 5.5rem !important;
+  max-width: none !important;
   white-space: nowrap !important;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
   text-align: center;
 }
 
 .data-table td > .table-status-badge {
-  display: inline-flex !important;
-  width: max-content;
-  min-width: 5.5rem;
+  display: inline-block !important;
+  width: auto !important;
+  min-width: 5.5rem !important;
   max-width: none !important;
   margin: 0 auto;
-  flex-wrap: nowrap;
   white-space: nowrap !important;
-  word-break: normal;
-  overflow-wrap: normal;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+}
+
+.distributor-bookings-table {
+  table-layout: auto;
+}
+
+.distributor-bookings-table th:nth-child(6),
+.distributor-bookings-table td:nth-child(6) {
+  min-width: 7.5rem;
+  white-space: nowrap !important;
 }
 
 .data-table td > .badge:only-child:not(.table-status-badge) {
