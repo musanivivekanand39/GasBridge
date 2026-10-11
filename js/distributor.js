@@ -82,7 +82,10 @@ export async function initDistributorDashboard() {
   const pendingAgentAssignment = bookings.filter(b => !b.deliveryAgentId && b.bookingStatus !== 'cancelled' && b.bookingStatus !== 'delivered');
   const processingCount = bookings.filter(b => b.bookingStatus === 'processing' || b.bookingStatus === 'agent_assigned' || b.bookingStatus === 'picked_up');
   const deliveredCount = bookings.filter(b => b.bookingStatus === 'delivered');
-  const approvedCustomers = allCustomers.filter(c => c.approvalStatus === 'approved' || (c.active && c.approvalStatus !== 'rejected'));
+  const approvedCustomers = allCustomers.filter(c =>
+    c.status !== 'rejected' && c.approvalStatus !== 'rejected' &&
+    (c.status === 'approved' || c.approvalStatus === 'approved' || c.active === true)
+  );
   const approvedAgents = agents.filter(a => a.approvalStatus === 'approved' || (a.active && a.approvalStatus !== 'rejected'));
 
   // Populate KPI Elements
