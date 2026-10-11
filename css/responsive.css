@@ -4,6 +4,11 @@
 
 /* Laptop & Medium Screens (max-width: 1024px) */
 @media (max-width: 1024px) {
+  .dashboard-two-column-grid,
+  .inventory-stock-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .tracking-layout {
     grid-template-columns: 1fr;
   }
