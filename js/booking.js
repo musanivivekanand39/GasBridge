@@ -58,17 +58,6 @@ export async function initBookingPage() {
 
   // 5. Setup Proceed to Payment Button
   const proceedBtn = document.getElementById('proceed-to-payment-btn');
-  const paymentMethodHint = document.getElementById('payment-method-hint');
-  document.querySelectorAll('input[name="payment-method"]').forEach(input => {
-    input.addEventListener('change', () => {
-      const hints = {
-        upi_qr: 'UPI QR checkout is simulated. No real money is charged.',
-        card: 'Card checkout is simulated. Do not enter real card details.',
-        cod: 'Pay the delivery agent in cash when your cylinder arrives. No online payment is taken now.'
-      };
-      if (paymentMethodHint) paymentMethodHint.textContent = hints[input.value];
-    });
-  });
   if (proceedBtn) {
     proceedBtn.addEventListener('click', async () => {
       proceedBtn.disabled = true;
@@ -94,8 +83,6 @@ export async function initBookingPage() {
 
       const cylinderMeta = LPG_CYLINDER_TYPES[selectedCylinderType] || LPG_CYLINDER_TYPES.domestic;
       const totalAmount = cylinderMeta.price * selectedQuantity;
-      const paymentMethod = document.querySelector('input[name="payment-method"]:checked')?.value || 'upi_qr';
-
       // Open the checkout modal
       await openDemoPaymentModal({
         customer: currentCustomer,
@@ -103,8 +90,7 @@ export async function initBookingPage() {
         cylinderMeta,
         quantity: selectedQuantity,
         totalAmount,
-        distributorId,
-        paymentMethod
+        distributorId
       });
 
       proceedBtn.disabled = false;

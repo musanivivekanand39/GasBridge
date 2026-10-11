@@ -152,6 +152,22 @@ function ensurePaymentModalExists() {
       </div>
 
         <div class="modal-body" style="padding: 1rem; overflow-y: auto; min-height: 0;">
+        <div id="payment-view-method" style="display:none;">
+          <h3 style="margin:0 0 .35rem;">Choose a payment method</h3>
+          <p style="color:var(--text-muted);font-size:.88rem;margin:0 0 1rem;">Select how you want to complete this order.</p>
+          <div style="display:grid;gap:.65rem;">
+            <button type="button" class="btn btn-outline" data-payment-method-choice="upi_qr" style="display:flex;justify-content:space-between;align-items:center;text-align:left;padding:.9rem 1rem;">
+              <span><strong>UPI</strong><small style="display:block;color:var(--text-muted);font-weight:400;">Scan a QR code · simulated payment</small></span><span aria-hidden="true">›</span>
+            </button>
+            <button type="button" class="btn btn-outline" data-payment-method-choice="card" style="display:flex;justify-content:space-between;align-items:center;text-align:left;padding:.9rem 1rem;">
+              <span><strong>Credit or debit card</strong><small style="display:block;color:var(--text-muted);font-weight:400;">Use the sample card details · simulated payment</small></span><span aria-hidden="true">›</span>
+            </button>
+            <button type="button" class="btn btn-outline" data-payment-method-choice="cod" style="display:flex;justify-content:space-between;align-items:center;text-align:left;padding:.9rem 1rem;">
+              <span><strong>Cash on delivery</strong><small style="display:block;color:var(--text-muted);font-weight:400;">Pay the delivery agent when your order arrives</small></span><span aria-hidden="true">›</span>
+            </button>
+          </div>
+          <button type="button" class="btn btn-outline btn-full" id="btn-cancel-method-choice" style="margin-top:1rem;">Cancel</button>
+        </div>
         <div id="payment-view-card" style="display:none;">
           <h3 style="margin:0 0 .4rem;">Pay by card</h3>
           <p style="color:var(--text-muted);font-size:.85rem;">Simulation only. Use the sample values shown below; never enter a real card.</p>
@@ -336,6 +352,7 @@ function ensurePaymentModalExists() {
   // Close handlers
   modal.querySelector('#close-payment-modal-btn').addEventListener('click', closeModalHandler);
   modal.querySelector('#btn-cancel-payment').addEventListener('click', closeModalHandler);
+  modal.querySelector('#btn-cancel-method-choice').addEventListener('click', closeModalHandler);
   modal.querySelector('#btn-dismiss-failure').addEventListener('click', closeModalHandler);
 
   // Step transitions
@@ -347,6 +364,19 @@ function ensurePaymentModalExists() {
   modal.querySelector('#btn-card-back').addEventListener('click', closeModalHandler);
   modal.querySelector('#btn-cod-back').addEventListener('click', closeModalHandler);
   modal.querySelector('#btn-place-cod-order').addEventListener('click', handleCodOrder);
+  modal.querySelectorAll('[data-payment-method-choice]').forEach(button => {
+    button.addEventListener('click', async () => {
+      const choices = modal.querySelectorAll('[data-payment-method-choice]');
+      choices.forEach(choice => { choice.disabled = true; });
+      try {
+        await beginSelectedPayment(button.dataset.paymentMethodChoice);
+      } catch (error) {
+        showToast('Could Not Start Checkout', error.message || 'Please try again.', 'error');
+      } finally {
+        choices.forEach(choice => { choice.disabled = false; });
+      }
+    });
+  });
   modal.querySelector('#test-card-form').addEventListener('submit', event => {
     event.preventDefault();
     const number = modal.querySelector('#test-card-number').value.replace(/\s/g, '');
@@ -381,6 +411,7 @@ function closeModalHandler() {
 function switchView(viewName) {
   const modal = document.getElementById('payment-modal');
   if (!modal) return;
+  modal.querySelector('#payment-view-method').style.display = viewName === 'method' ? 'block' : 'none';
   modal.querySelector('#payment-view-qr').style.display = viewName === 'qr' ? 'block' : 'none';
   modal.querySelector('#payment-view-confirm').style.display = viewName === 'confirm' ? 'block' : 'none';
   modal.querySelector('#payment-view-failure').style.display = viewName === 'failure' ? 'block' : 'none';
@@ -412,6 +443,21 @@ function paymentMethodLabel(method) {
  */
 export async function openDemoPaymentModal(context) {
   stopPaymentWindow();
+  currentBooking = null;
+  activeOrderContext = context;
+  const modal = ensurePaymentModalExists();
+  modal.querySelector('#payment-header-hint').textContent = 'Choose how you want to pay';
+  modal.querySelector('#payment-disclosure span:last-child').textContent = 'UPI and card are simulated · COD is paid at delivery';
+  modal.querySelector('#btn-retry-payment').style.display = '';
+  modal.querySelector('#btn-dismiss-failure').style.display = '';
+  switchView('method');
+  modal.classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+async function beginSelectedPayment(paymentMethod) {
+  stopPaymentWindow();
+  const context = { ...activeOrderContext, paymentMethod };
   activeOrderContext = context;
   const modal = ensurePaymentModalExists();
   const methodText = {
