@@ -670,6 +670,12 @@
   color: #fff;
 }
 
+.milestone-marker-cancelled {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: #fff;
+}
+
 .milestone-label {
   color: var(--text-muted);
   font-size: 0.88rem;
@@ -679,6 +685,11 @@
 .milestone-row.is-active .milestone-label {
   color: var(--text-main);
   font-weight: 650;
+}
+
+.milestone-row.is-cancelled .milestone-label {
+  color: var(--danger);
+  font-weight: 700;
 }
 
 .milestone-time {
@@ -705,6 +716,11 @@
 .milestone-state-pending {
   background: #eef2f7;
   color: #64748b;
+}
+
+.milestone-state-cancelled {
+  background: #fee2e2;
+  color: #dc2626;
 }
 
 .tracking-stepper {
@@ -734,6 +750,12 @@
   background-color: var(--primary);
   z-index: 2;
   transition: width 0.4s ease;
+}
+
+.tracking-stepper-cancelled .tracking-progress-bar {
+  left: 25%;
+  width: 50% !important;
+  background: var(--danger);
 }
 
 .step-node {
@@ -773,6 +795,18 @@
   border-color: var(--secondary);
   color: var(--secondary);
   box-shadow: 0 0 0 4px var(--secondary-light);
+}
+
+.step-node.cancelled .step-node-icon {
+  background: #fff;
+  border-color: var(--danger);
+  color: var(--danger);
+  box-shadow: 0 0 0 4px #fee2e2;
+}
+
+.step-node.cancelled .step-node-label {
+  color: var(--danger);
+  font-weight: 700;
 }
 
 .step-node-label {

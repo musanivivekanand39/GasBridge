@@ -64,9 +64,16 @@ async function loadAndRenderTracking(bookingId, isSilentRefresh = false) {
   const idEl = document.getElementById('track-booking-id');
   const badgeEl = document.getElementById('track-status-badge');
   const estEl = document.getElementById('track-est-delivery');
+  const estLabelEl = document.getElementById('track-est-label');
   if (idEl) idEl.textContent = booking.bookingId;
   if (badgeEl) badgeEl.innerHTML = getStatusBadgeHTML(booking.bookingStatus);
-  if (estEl) estEl.textContent = booking.estimatedDelivery || "Next Business Day";
+  if (booking.bookingStatus === 'cancelled') {
+    if (estLabelEl) estLabelEl.textContent = 'Final status:';
+    if (estEl) estEl.textContent = 'Cancelled';
+  } else {
+    if (estLabelEl) estLabelEl.textContent = 'Est. Delivery:';
+    if (estEl) estEl.textContent = booking.estimatedDelivery || "Next Business Day";
+  }
 
   // 2. Render 6-step Visual Stepper
   renderStepper(booking.bookingStatus);
@@ -124,13 +131,14 @@ async function loadAndRenderTracking(bookingId, isSilentRefresh = false) {
     timeline.forEach(item => {
       if (item?.status) eventByStatus.set(item.status, item);
     });
-    if (!eventByStatus.has('confirmed')) {
+    const isCancelled = booking.bookingStatus === 'cancelled';
+    if (!isCancelled && !eventByStatus.has('confirmed')) {
       eventByStatus.set('confirmed', { time: booking.createdAt || booking.updatedAt });
     }
 
     const currentIndex = STEPS_ORDER.indexOf(booking.bookingStatus);
     const activeIndex = currentIndex >= 0 ? currentIndex : 0;
-    const milestones = [
+    const deliveryMilestones = [
       { key: 'confirmed', label: 'Booking Confirmed' },
       { key: 'processing', label: 'Processing' },
       { key: 'agent_assigned', label: 'Agent Assigned' },
@@ -138,24 +146,35 @@ async function loadAndRenderTracking(bookingId, isSilentRefresh = false) {
       { key: 'out_for_delivery', label: 'Out for Delivery' },
       { key: 'delivered', label: 'Delivered' }
     ];
+    const milestones = isCancelled
+      ? [
+          ...deliveryMilestones.filter(milestone => eventByStatus.has(milestone.key)),
+          { key: 'cancelled', label: 'Order Cancelled' }
+        ]
+      : deliveryMilestones;
 
     timelineEl.innerHTML = `<div class="milestone-list">${milestones.map((milestone, index) => {
-      const complete = index < activeIndex || (booking.bookingStatus === 'delivered' && index === activeIndex);
-      const active = index === activeIndex && booking.bookingStatus !== 'delivered';
+      const cancelled = isCancelled && milestone.key === 'cancelled';
+      const complete = isCancelled
+        ? !cancelled
+        : index < activeIndex || (booking.bookingStatus === 'delivered' && index === activeIndex);
+      const active = !isCancelled && index === activeIndex && booking.bookingStatus !== 'delivered';
       const event = eventByStatus.get(milestone.key);
       const badge = complete
         ? ''
-        : active
+        : cancelled
+          ? `<span class="milestone-state milestone-state-cancelled">Cancelled</span>`
+          : active
           ? `<span class="milestone-state milestone-state-active">In Progress</span>`
           : `<span class="milestone-state milestone-state-pending">Pending</span>`;
       const marker = complete
         ? '<span class="milestone-marker milestone-marker-complete">✓</span>'
-        : `<span class="milestone-marker ${active ? 'milestone-marker-active' : ''}">${index + 1}</span>`;
+        : `<span class="milestone-marker ${cancelled ? 'milestone-marker-cancelled' : active ? 'milestone-marker-active' : ''}">${cancelled ? '×' : index + 1}</span>`;
       const timestamp = event?.time
         ? new Date(event.time).toLocaleString('sv-SE', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
         : '';
 
-      return `<div class="milestone-row ${complete ? 'is-complete' : ''} ${active ? 'is-active' : ''}">
+      return `<div class="milestone-row ${complete ? 'is-complete' : ''} ${active ? 'is-active' : ''} ${cancelled ? 'is-cancelled' : ''}">
         ${marker}
         <span class="milestone-label">${milestone.label}</span>
         ${timestamp ? `<time class="milestone-time" datetime="${escapeHTML(event.time)}">${escapeHTML(timestamp)}</time>` : ''}
@@ -168,6 +187,23 @@ async function loadAndRenderTracking(bookingId, isSilentRefresh = false) {
 function renderStepper(currentStatus) {
   const stepperContainer = document.getElementById('tracking-stepper-container');
   if (!stepperContainer) return;
+
+  if (currentStatus === 'cancelled') {
+    stepperContainer.innerHTML = `
+      <div class="tracking-stepper tracking-stepper-cancelled">
+        <div class="tracking-progress-bar"></div>
+        <div class="step-node completed">
+          <div class="step-node-icon">✓</div>
+          <div class="step-node-label">Booking Confirmed</div>
+        </div>
+        <div class="step-node cancelled">
+          <div class="step-node-icon">×</div>
+          <div class="step-node-label">Order Cancelled</div>
+        </div>
+      </div>
+    `;
+    return;
+  }
 
   const currentIndex = STEPS_ORDER.indexOf(currentStatus);
   const activeIdx = currentIndex >= 0 ? currentIndex : 0;
