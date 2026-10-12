@@ -10,8 +10,11 @@ This project is an academic application. Its QR checkout is a test flow and does
 - Customer registration with address and pincode based service-area lookup.
 - Domestic and commercial cylinder bookings, up to three cylinders per booking.
 - UPI QR and credit/debit card payment simulation, plus cash on delivery. Simulated online methods do not charge money; COD remains due until cash is collected at delivery.
+- Card checkout uses a blank cardholder, card number, expiry, and CVV form. Values are validated for the simulation only and are not stored or sent to Firebase.
 - Distributor booking management, inventory and delivery-agent assignment.
-- Delivery status updates and customer order tracking.
+- Delivery status updates, customer order tracking, and address-based Google Maps navigation for delivery agents.
+- In-app notifications for account, booking, payment, assignment, delivery, and refund status changes.
+- Cancellation of eligible paid bookings records a simulated refund and notifies the customer; no real money is transferred.
 - Firebase Authentication and Cloud Firestore in configured live mode, with a local browser storage fallback when Firebase settings are placeholders.
 
 ## Roles and main pages
@@ -27,7 +30,7 @@ Customers select neither their distributor nor delivery agent during booking. Th
 
 ## Checkout and booking lifecycle
 
-UPI and card checkout use a payment simulation; no real payment provider or money transfer is involved. Card checkout accepts only the sample values shown in the form and does not save card details. The UPI QR link requires the site to be deployed at a reachable URL for use from a phone. Cash-on-delivery bookings are confirmed as orders while payment remains due; the delivery agent records cash collection at handover. An unpaid online checkout that expires or is cancelled is not a fulfilled order.
+UPI and card checkout use a payment simulation; no real payment provider or money transfer is involved. Card checkout presents blank fields for cardholder name, card number, expiry, and CVV. The app validates these values locally for the simulated flow, then discards them without saving or sending them to Firebase. Do not enter real payment credentials. The UPI QR link requires the site to be deployed at a reachable URL for use from a phone. Cash-on-delivery bookings are confirmed as orders while payment remains due; the delivery agent records cash collection at handover. Cancelling an eligible booking that was already paid records a simulated refund in the booking and sends an in-app notification to the customer; it does not move real money. An unpaid online checkout that expires or is cancelled is not a fulfilled order.
 
 ## Interface design
 
@@ -37,9 +40,9 @@ The customer booking and checkout flow applies [Shneiderman's Eight Golden Rules
 2. **Universal usability:** Use responsive layouts, native radio controls, visible labels, and keyboard-operable actions.
 3. **Informative feedback:** Show stock checks, processing states, validation errors, payment status, and order confirmation.
 4. **Clear completion:** End checkout with the booking ID, amount, selected payment method, and next action.
-5. **Prevent errors:** Check stock before checkout, restrict card checkout to sample card values, and distinguish cash due from paid.
+5. **Prevent errors:** Check stock before checkout, validate required card fields for the simulation without storing them, and distinguish cash due from paid.
 6. **Easy reversal:** Let customers go back between checkout steps or cancel before an order is placed.
-7. **User control:** Let customers choose UPI, card, or cash on delivery and show what each choice does before continuing.
+7. **User control:** Let customers choose UPI, credit/debit card, or cash on delivery and show what each choice does before continuing.
 8. **Reduce memory load:** Keep the cylinder, quantity, total amount, and payment choice together through checkout and in the confirmation.
 
 Cylinder prices are configured in `js/firebase-config.js` (currently ₹950 for domestic and ₹1,850 for commercial). Booking IDs use the format `GB-YYYYMMDD-XXXX`.
