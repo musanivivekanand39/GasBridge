@@ -170,8 +170,26 @@ function ensurePaymentModalExists() {
         </div>
         <div id="payment-view-card" style="display:none;">
           <h3 style="margin:0 0 .4rem;">Pay by card</h3>
-          <p style="color:var(--text-muted);font-size:.88rem;">This is a simulated payment. No card details are needed, and no money will be charged.</p>
+          <p style="color:var(--text-muted);font-size:.88rem;">Simulation only: no money is charged and card details are not saved. Use evaluator test details only; do not enter a real card.</p>
           <p style="margin:.9rem 0;font-weight:700;">Amount: <span id="card-pay-amount"></span></p>
+          <div class="form-group">
+            <label for="cardholder-name">Cardholder name</label>
+            <input id="cardholder-name" class="form-control" type="text" autocomplete="off" required>
+          </div>
+          <div class="form-group">
+            <label for="card-number">Credit / debit card number</label>
+            <input id="card-number" class="form-control" type="text" inputmode="numeric" autocomplete="off" maxlength="23" placeholder="Enter card number" required>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1rem;">
+            <div class="form-group" style="margin:0;">
+              <label for="card-expiry">Expiry (MM/YY)</label>
+              <input id="card-expiry" class="form-control" type="text" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="MM/YY" required>
+            </div>
+            <div class="form-group" style="margin:0;">
+              <label for="card-cvv">CVV</label>
+              <input id="card-cvv" class="form-control" type="password" inputmode="numeric" autocomplete="new-password" maxlength="4" placeholder="CVV" required>
+            </div>
+          </div>
           <div style="display:flex;gap:.65rem;"><button class="btn btn-outline" type="button" id="btn-card-back">Back to booking</button><button class="btn btn-primary" type="button" id="btn-card-pay" style="flex:1;">Complete simulated payment</button></div>
         </div>
         <div id="payment-view-cod" style="display:none;text-align:center;padding:1rem 0;">
@@ -370,9 +388,29 @@ function ensurePaymentModalExists() {
   });
   modal.querySelector('#btn-card-pay').addEventListener('click', () => {
     const payButton = modal.querySelector('#btn-card-pay');
+    const validationError = validateCardEntry(modal);
+    if (validationError) {
+      showToast('Check card details', validationError, 'error');
+      return;
+    }
+    // Card details are only used for local form validation and are discarded
+    // before the simulation continues. They are never added to the payment data.
+    clearCardEntry(modal);
     payButton.disabled = true;
     payButton.textContent = 'Processing…';
     handlePaymentSuccess();
+  });
+
+  modal.querySelector('#card-number').addEventListener('input', event => {
+    const digits = event.target.value.replace(/\D/g, '').slice(0, 19);
+    event.target.value = digits.replace(/(.{4})/g, '$1 ').trim();
+  });
+  modal.querySelector('#card-expiry').addEventListener('input', event => {
+    const digits = event.target.value.replace(/\D/g, '').slice(0, 4);
+    event.target.value = digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
+  });
+  modal.querySelector('#card-cvv').addEventListener('input', event => {
+    event.target.value = event.target.value.replace(/\D/g, '').slice(0, 4);
   });
 
   return modal;
@@ -383,9 +421,36 @@ function closeModalHandler() {
   void cancelPendingBooking('Checkout was closed before payment confirmation.');
   const modal = document.getElementById('payment-modal');
   if (modal) {
+    clearCardEntry(modal);
     modal.classList.remove('active');
     document.body.style.overflow = '';
   }
+}
+
+function validateCardEntry(modal) {
+  const name = modal.querySelector('#cardholder-name').value.trim();
+  const number = modal.querySelector('#card-number').value.replace(/\D/g, '');
+  const expiry = modal.querySelector('#card-expiry').value.trim();
+  const cvv = modal.querySelector('#card-cvv').value.trim();
+  if (!name) return 'Enter the cardholder name.';
+  if (!/^\d{13,19}$/.test(number)) return 'Enter a card number containing 13 to 19 digits.';
+  const expiryMatch = /^(0[1-9]|1[0-2])\/(\d{2})$/.exec(expiry);
+  if (!expiryMatch) return 'Enter the expiry date in MM/YY format.';
+  const expiryMonth = Number(expiryMatch[1]);
+  const expiryYear = 2000 + Number(expiryMatch[2]);
+  const now = new Date();
+  if (expiryYear < now.getFullYear() || (expiryYear === now.getFullYear() && expiryMonth < now.getMonth() + 1)) {
+    return 'The card expiry date has passed.';
+  }
+  if (!/^\d{3,4}$/.test(cvv)) return 'Enter a 3 or 4 digit CVV.';
+  return '';
+}
+
+function clearCardEntry(modal) {
+  ['#cardholder-name', '#card-number', '#card-expiry', '#card-cvv'].forEach(selector => {
+    const input = modal.querySelector(selector);
+    if (input) input.value = '';
+  });
 }
 
 function switchView(viewName) {
