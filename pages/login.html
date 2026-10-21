@@ -92,9 +92,11 @@
           </div>
 
           <div class="form-group">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-              <label for="login-password" style="margin-bottom: 0;">Password</label>
-              <button type="button" class="auth-forgot-link" id="forgot-password-link">Forgot Password?</button>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+              <label for="login-password" style="margin-bottom: 0; font-weight: 600;">Password</label>
+              <button type="button" id="forgot-password-link" style="background: none; border: none; padding: 0; font-size: 0.82rem; font-weight: 600; color: #15803d; cursor: pointer; text-decoration: none; font-family: inherit; transition: color 0.15s ease;" onmouseover="this.style.color='#166534'; this.style.textDecoration='underline';" onmouseout="this.style.color='#15803d'; this.style.textDecoration='none';">
+                Forgot Password?
+              </button>
             </div>
             <div class="password-input-wrapper">
               <input type="password" id="login-password" class="form-control" placeholder="••••••••" required autocomplete="current-password">
@@ -127,47 +129,65 @@
     </div>
   </div>
 
-  <!-- Forgot Password Modal -->
-  <div class="modal-backdrop" id="forgot-password-modal" role="dialog" aria-modal="true" aria-labelledby="forgot-modal-title">
-    <div class="modal-dialog">
-      <div class="modal-header">
-        <h3 id="forgot-modal-title">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--primary);">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-          </svg>
-          Reset Your Password
-        </h3>
-        <button type="button" class="modal-close-btn" id="forgot-modal-close" aria-label="Close modal">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+  <!-- Forgot Password Pop-up Modal -->
+  <div id="forgot-password-modal" style="display: none; position: fixed; inset: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 99999; align-items: center; justify-content: center; padding: 1.25rem; box-sizing: border-box;" role="dialog" aria-modal="true" aria-labelledby="forgot-modal-title">
+    <div style="background: #ffffff; border-radius: 16px; max-width: 480px; width: 100%; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35); overflow: hidden; border: 1px solid #e2e8f0; animation: modalPop 0.22s cubic-bezier(0.16, 1, 0.3, 1);">
+      <div style="padding: 1.25rem 1.5rem; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between; background: #ffffff;">
+        <div style="display: flex; align-items: center; gap: 0.65rem;">
+          <div style="width: 36px; height: 36px; border-radius: 10px; background: #dcfce7; color: #15803d; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </div>
+          <div>
+            <h3 id="forgot-modal-title" style="margin: 0; font-size: 1.15rem; font-weight: 700; color: #0f172a; font-family: 'Outfit', sans-serif;">
+              Reset Password
+            </h3>
+            <span style="font-size: 0.78rem; color: #64748b;">Receive a secure password reset link via email</span>
+          </div>
+        </div>
+        <button type="button" id="forgot-modal-close" aria-label="Close modal" style="background: transparent; border: none; cursor: pointer; color: #94a3b8; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; transition: all 0.15s ease;" onmouseover="this.style.background='#f1f5f9'; this.style.color='#0f172a';" onmouseout="this.style.background='transparent'; this.style.color='#94a3b8';">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
           </svg>
         </button>
       </div>
-      <form id="forgot-password-form" novalidate>
-        <div class="modal-body">
-          <p style="margin-top: 0; margin-bottom: 1rem; color: var(--text-muted); font-size: 0.9rem;">
-            Enter the registered email associated with your GasBridge account (Customer, LPG Distributor, Delivery Agent, or Administrator). We will send you a secure link to reset your password.
+
+      <form id="forgot-password-form" novalidate style="margin: 0;">
+        <div style="padding: 1.5rem;">
+          <p style="margin-top: 0; margin-bottom: 1.25rem; color: #475569; font-size: 0.88rem; line-height: 1.5;">
+            Enter the registered email associated with your GasBridge account. We will send you an official email where you can securely set a new password.
           </p>
 
-          <div id="forgot-modal-banner" style="display: none; padding: 0.75rem 1rem; border-radius: var(--radius-md, 8px); font-size: 0.85rem; margin-bottom: 1rem;"></div>
+          <div id="forgot-modal-banner" style="display: none; padding: 0.85rem 1rem; border-radius: 10px; font-size: 0.86rem; margin-bottom: 1.25rem; line-height: 1.45;"></div>
 
           <div class="form-group" style="margin-bottom: 0.5rem;">
-            <label for="reset-email" style="font-weight: 600; font-size: 0.88rem; color: var(--text-main);">Registered Email Address</label>
-            <input type="email" id="reset-email" class="form-control" placeholder="your-email@domain.com" required autocomplete="email">
-            <div class="field-error" id="error-reset-email" style="margin-top: 0.25rem;"></div>
+            <label for="reset-email" style="display: block; font-weight: 600; font-size: 0.86rem; color: #1e293b; margin-bottom: 0.4rem;">Registered Email Address</label>
+            <input type="email" id="reset-email" class="form-control" placeholder="name@domain.com" required autocomplete="email" style="width: 100%; box-sizing: border-box;">
+            <div class="field-error" id="error-reset-email" style="margin-top: 0.35rem; font-size: 0.8rem; color: #dc2626;"></div>
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline" id="forgot-modal-cancel">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="reset-submit-btn">
+
+        <div style="padding: 1rem 1.5rem; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 0.75rem; background: #f8fafc;">
+          <button type="button" class="btn btn-outline" id="forgot-modal-cancel" style="padding: 0.6rem 1.25rem; font-size: 0.9rem;">
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary" id="reset-submit-btn" style="padding: 0.6rem 1.4rem; font-size: 0.9rem;">
             Send Reset Link &rarr;
           </button>
         </div>
       </form>
     </div>
   </div>
+
+  <style>
+    @keyframes modalPop {
+      from { opacity: 0; transform: scale(0.95) translateY(6px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+  </style>
 
   <script type="module">
     import { loginUser, requestPasswordReset, ROLE_DASHBOARD_MAP } from "../js/auth.js";
@@ -269,11 +289,13 @@
       forgotBanner.textContent = '';
       resetSubmitBtn.disabled = false;
       resetSubmitBtn.textContent = 'Send Reset Link →';
+      forgotModal.style.display = 'flex';
       forgotModal.classList.add('active');
       setTimeout(() => resetEmailInput.focus(), 100);
     }
 
     function closeForgotModal() {
+      forgotModal.style.display = 'none';
       forgotModal.classList.remove('active');
     }
 
@@ -296,7 +318,7 @@
 
     // Close on Escape key
     window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && forgotModal.classList.contains('active')) {
+      if (e.key === 'Escape' && (forgotModal.style.display === 'flex' || forgotModal.classList.contains('active'))) {
         closeForgotModal();
       }
     });
