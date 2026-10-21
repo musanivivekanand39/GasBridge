@@ -92,7 +92,10 @@
           </div>
 
           <div class="form-group">
-            <label for="login-password">Password</label>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+              <label for="login-password" style="margin-bottom: 0;">Password</label>
+              <button type="button" class="auth-forgot-link" id="forgot-password-link">Forgot Password?</button>
+            </div>
             <div class="password-input-wrapper">
               <input type="password" id="login-password" class="form-control" placeholder="••••••••" required autocomplete="current-password">
               <button type="button" class="password-toggle-btn" id="toggle-password" aria-label="Toggle password visibility">
@@ -124,8 +127,50 @@
     </div>
   </div>
 
+  <!-- Forgot Password Modal -->
+  <div class="modal-backdrop" id="forgot-password-modal" role="dialog" aria-modal="true" aria-labelledby="forgot-modal-title">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="forgot-modal-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--primary);">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          Reset Your Password
+        </h3>
+        <button type="button" class="modal-close-btn" id="forgot-modal-close" aria-label="Close modal">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <form id="forgot-password-form" novalidate>
+        <div class="modal-body">
+          <p style="margin-top: 0; margin-bottom: 1rem; color: var(--text-muted); font-size: 0.9rem;">
+            Enter the registered email associated with your GasBridge account (Customer, LPG Distributor, Delivery Agent, or Administrator). We will send you a secure link to reset your password.
+          </p>
+
+          <div id="forgot-modal-banner" style="display: none; padding: 0.75rem 1rem; border-radius: var(--radius-md, 8px); font-size: 0.85rem; margin-bottom: 1rem;"></div>
+
+          <div class="form-group" style="margin-bottom: 0.5rem;">
+            <label for="reset-email" style="font-weight: 600; font-size: 0.88rem; color: var(--text-main);">Registered Email Address</label>
+            <input type="email" id="reset-email" class="form-control" placeholder="your-email@domain.com" required autocomplete="email">
+            <div class="field-error" id="error-reset-email" style="margin-top: 0.25rem;"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="forgot-modal-cancel">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="reset-submit-btn">
+            Send Reset Link &rarr;
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script type="module">
-    import { loginUser, ROLE_DASHBOARD_MAP } from "../js/auth.js";
+    import { loginUser, requestPasswordReset, ROLE_DASHBOARD_MAP } from "../js/auth.js";
     import { showToast, validateEmail, setFieldValidation } from "../js/utils.js";
 
     // Check for session expired query param
@@ -201,6 +246,105 @@
         showToast("Login Failed", err.message || "Invalid credentials.", "error");
         submitBtn.disabled = false;
         submitBtn.textContent = "Sign In →";
+      }
+    });
+
+    // Forgot Password Modal Logic
+    const forgotModal = document.getElementById('forgot-password-modal');
+    const forgotLink = document.getElementById('forgot-password-link');
+    const forgotCloseBtn = document.getElementById('forgot-modal-close');
+    const forgotCancelBtn = document.getElementById('forgot-modal-cancel');
+    const forgotForm = document.getElementById('forgot-password-form');
+    const resetEmailInput = document.getElementById('reset-email');
+    const resetSubmitBtn = document.getElementById('reset-submit-btn');
+    const forgotBanner = document.getElementById('forgot-modal-banner');
+
+    function openForgotModal() {
+      // Pre-fill email if already entered in login form
+      if (emailInput.value.trim()) {
+        resetEmailInput.value = emailInput.value.trim();
+      }
+      setFieldValidation(resetEmailInput, 'error-reset-email', '');
+      forgotBanner.style.display = 'none';
+      forgotBanner.textContent = '';
+      resetSubmitBtn.disabled = false;
+      resetSubmitBtn.textContent = 'Send Reset Link →';
+      forgotModal.classList.add('active');
+      setTimeout(() => resetEmailInput.focus(), 100);
+    }
+
+    function closeForgotModal() {
+      forgotModal.classList.remove('active');
+    }
+
+    if (forgotLink) {
+      forgotLink.addEventListener('click', openForgotModal);
+    }
+    if (forgotCloseBtn) {
+      forgotCloseBtn.addEventListener('click', closeForgotModal);
+    }
+    if (forgotCancelBtn) {
+      forgotCancelBtn.addEventListener('click', closeForgotModal);
+    }
+
+    // Close on backdrop click
+    forgotModal.addEventListener('click', (e) => {
+      if (e.target === forgotModal) {
+        closeForgotModal();
+      }
+    });
+
+    // Close on Escape key
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && forgotModal.classList.contains('active')) {
+        closeForgotModal();
+      }
+    });
+
+    resetEmailInput.addEventListener('input', () => {
+      setFieldValidation(resetEmailInput, 'error-reset-email', '');
+    });
+
+    forgotForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = resetEmailInput.value.trim();
+
+      const emailErr = validateEmail(email);
+      if (emailErr) {
+        setFieldValidation(resetEmailInput, 'error-reset-email', emailErr);
+        return;
+      }
+      setFieldValidation(resetEmailInput, 'error-reset-email', '');
+
+      resetSubmitBtn.disabled = true;
+      resetSubmitBtn.textContent = 'Sending email...';
+      forgotBanner.style.display = 'none';
+
+      try {
+        const result = await requestPasswordReset(email);
+        forgotBanner.style.display = 'block';
+        forgotBanner.style.background = '#dcfce7';
+        forgotBanner.style.border = '1px solid #86efac';
+        forgotBanner.style.color = '#15803d';
+        forgotBanner.innerHTML = `<strong>Email Dispatched:</strong> A password change link has been sent to <strong>${email}</strong>. Check your inbox to change your password.`;
+        
+        showToast("Email Sent", `Password reset instructions sent to ${email}`, "success");
+        resetSubmitBtn.textContent = 'Sent Successfully ✓';
+        
+        // Auto-close after 4 seconds
+        setTimeout(() => {
+          closeForgotModal();
+        }, 4000);
+      } catch (err) {
+        forgotBanner.style.display = 'block';
+        forgotBanner.style.background = '#fee2e2';
+        forgotBanner.style.border = '1px solid #fca5a5';
+        forgotBanner.style.color = '#dc2626';
+        forgotBanner.innerHTML = `<strong>Error:</strong> ${err.message || 'Unable to send reset email.'}`;
+        
+        showToast("Reset Failed", err.message || "Failed to send reset link.", "error");
+        resetSubmitBtn.disabled = false;
+        resetSubmitBtn.textContent = 'Send Reset Link →';
       }
     });
   </script>

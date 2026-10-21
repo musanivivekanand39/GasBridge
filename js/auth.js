@@ -14,6 +14,7 @@ import {
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   sendEmailVerification,
+  sendPasswordResetEmail,
   signOut,
   onAuthStateChanged
 } from "./firebase.js";
@@ -994,4 +995,45 @@ export async function logoutUser() {
     try { await signOut(auth); } catch (e) {}
   }
   window.location.href = "login.html";
+}
+
+/**
+ * Send Password Reset Email (Firebase Authentication)
+ * Triggers a secure password reset link to the user's registered email.
+ * Available to all roles (Customer, Distributor, Delivery Agent, Admin).
+ */
+export async function requestPasswordReset(email) {
+  const targetEmail = String(email || '').trim().toLowerCase();
+  if (!targetEmail) {
+    throw new Error("Please enter your registered email address.");
+  }
+
+  const emailErr = validateEmail(targetEmail);
+  if (emailErr) {
+    throw new Error(emailErr);
+  }
+
+  if (isDemo || !auth) {
+    throw new Error("Password reset requires an active Firebase configuration. Please check your setup.");
+  }
+
+  try {
+    await sendPasswordResetEmail(auth, targetEmail);
+    return {
+      success: true,
+      email: targetEmail,
+      message: `A password reset link has been dispatched to ${targetEmail}. Please check your inbox and spam folder.`
+    };
+  } catch (error) {
+    console.error("Password reset error:", error);
+    if (error.code === 'auth/user-not-found') {
+      // For security, can either disclose or indicate standard message
+      throw new Error("No account found with this email address. Please check and try again.");
+    } else if (error.code === 'auth/invalid-email') {
+      throw new Error("The email address provided is invalid.");
+    } else if (error.code === 'auth/too-many-requests') {
+      throw new Error("Too many reset attempts. Please wait a few minutes before trying again.");
+    }
+    throw new Error(error.message || "Failed to send password reset email. Please try again.");
+  }
 }

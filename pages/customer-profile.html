@@ -204,21 +204,89 @@
               </div>
             </form>
           </div>
+
+          <!-- Security & Password Reset Card -->
+          <div class="card" style="margin-top: 1.5rem;">
+            <div class="card-header">
+              <h3 class="card-title">Security &amp; Password</h3>
+            </div>
+            <div style="padding: 1rem 0;">
+              <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0; margin-bottom: 1.25rem;">
+                Need to change or update your password? Click below and GasBridge will dispatch a secure password reset link to your verified email address (<strong id="prof-reset-email-display">-</strong>).
+              </p>
+              <div id="prof-reset-banner" style="display: none; padding: 0.75rem 1rem; border-radius: var(--radius-md); font-size: 0.88rem; margin-bottom: 1.25rem;"></div>
+              <button type="button" class="btn btn-outline" id="prof-reset-password-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.4rem; vertical-align: -2px;">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                Send Password Reset Email
+              </button>
+            </div>
+          </div>
         </div>
       </main>
     </div>
   </div>
 
   <script type="module">
-    import { requireAuth, logoutUser } from "../js/auth.js";
+    import { requireAuth, logoutUser, requestPasswordReset } from "../js/auth.js";
     import { initCustomerProfile } from "../js/customer.js";
     import { initNotificationsUI } from "../js/notifications.js";
+    import { showToast } from "../js/utils.js";
 
     const user = await requireAuth(['customer']);
     if (user) {
       document.getElementById('sidebar-user-name').textContent = user.name || 'Customer';
       document.getElementById('sidebar-user-email').textContent = user.email || '';
       document.getElementById('sidebar-user-avatar').textContent = (user.name || 'C').charAt(0).toUpperCase();
+
+      const resetEmailDisplay = document.getElementById('prof-reset-email-display');
+      if (resetEmailDisplay) {
+        resetEmailDisplay.textContent = user.email || 'your account email';
+      }
+
+      const resetBtn = document.getElementById('prof-reset-password-btn');
+      const resetBanner = document.getElementById('prof-reset-banner');
+
+      if (resetBtn) {
+        resetBtn.addEventListener('click', async () => {
+          if (!user.email) {
+            showToast("Error", "No registered email address found.", "error");
+            return;
+          }
+
+          resetBtn.disabled = true;
+          resetBtn.textContent = "Sending Email...";
+          resetBanner.style.display = 'none';
+
+          try {
+            await requestPasswordReset(user.email);
+            resetBanner.style.display = 'block';
+            resetBanner.style.background = '#dcfce7';
+            resetBanner.style.border = '1px solid #86efac';
+            resetBanner.style.color = '#15803d';
+            resetBanner.innerHTML = `<strong>Email Dispatched:</strong> A password change link has been sent to <strong>${user.email}</strong>. Please check your inbox.`;
+            showToast("Email Dispatched", "Password reset instructions sent.", "success");
+            resetBtn.textContent = "Sent Successfully ✓";
+          } catch (err) {
+            resetBanner.style.display = 'block';
+            resetBanner.style.background = '#fee2e2';
+            resetBanner.style.border = '1px solid #fca5a5';
+            resetBanner.style.color = '#dc2626';
+            resetBanner.innerHTML = `<strong>Error:</strong> ${err.message || 'Failed to send password reset email.'}`;
+            showToast("Reset Failed", err.message || "Failed to send reset link.", "error");
+            resetBtn.disabled = false;
+            resetBtn.innerHTML = `
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.4rem; vertical-align: -2px;">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+              Send Password Reset Email
+            `;
+          }
+        });
+      }
 
       initNotificationsUI();
       initCustomerProfile();
