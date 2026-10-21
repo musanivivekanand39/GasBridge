@@ -21,9 +21,11 @@ import {
   rejectCustomer,
   approveDeliveryAgent,
   rejectDeliveryAgent,
-  createNotification
+  createNotification,
+  updateDistributorProfile
 } from "./firestore.js";
 import { formatCurrency, formatDateTime, getStatusBadgeHTML, showToast, escapeHTML, openModal, closeModal } from "./utils.js";
+import { generateQRCodeSVG } from "./qrcode.js";
 
 function resolveDistributorId(user) {
   if (user?.distributorId) return user.distributorId;
@@ -382,6 +384,125 @@ export async function initDistributorDashboard() {
         `;
       }).join('');
     }
+  }
+
+  // Setup UPI Payment & QR Code Management
+  setupDistributorUpiManagement(distributor, distributorId);
+}
+
+function setupDistributorUpiManagement(distributor, distributorId) {
+  const form = document.getElementById('distributor-upi-form');
+  if (!form) return;
+
+  const upiInput = document.getElementById('dist-upi-id');
+  const payeeInput = document.getElementById('dist-upi-payee-name');
+  const previewContainer = document.getElementById('distributor-qr-preview-container');
+  const previewPayee = document.getElementById('preview-payee-name');
+  const previewUpi = document.getElementById('preview-upi-id');
+  const saveBtn = document.getElementById('btn-save-upi');
+  const refreshBtn = document.getElementById('btn-reset-upi-preview');
+
+  const currentUpiId = distributor?.upiId || 'gasbridge.shadnagar@upi';
+  const currentPayee = distributor?.upiPayeeName || distributor?.businessName || distributor?.name || 'GasBridge Depot';
+
+  if (upiInput) upiInput.value = currentUpiId;
+  if (payeeInput) payeeInput.value = currentPayee;
+
+  function updateQRPreview(vpa, payee) {
+    const cleanVpa = (vpa || '').trim();
+    const cleanPayee = (payee || '').trim() || 'GasBridge Depot';
+
+    if (previewPayee) previewPayee.textContent = cleanPayee;
+    if (previewUpi) previewUpi.textContent = cleanVpa || 'Not configured';
+
+    if (!cleanVpa) {
+      if (previewContainer) {
+        previewContainer.innerHTML = '<div style="padding: 2rem; color: var(--text-muted); font-size: 0.85rem;">Enter a UPI ID to preview QR</div>';
+      }
+      return;
+    }
+
+    const upiUri = `upi://pay?pa=${encodeURIComponent(cleanVpa)}&pn=${encodeURIComponent(cleanPayee)}&cu=INR`;
+    try {
+      const qrSvg = generateQRCodeSVG(upiUri, {
+        size: 160,
+        margin: 3,
+        darkColor: "#0f172a"
+      });
+      if (previewContainer) {
+        previewContainer.innerHTML = qrSvg;
+      }
+    } catch (err) {
+      console.error('QR preview generation error:', err);
+    }
+  }
+
+  // Initial preview render
+  updateQRPreview(currentUpiId, currentPayee);
+
+  // Live input update
+  if (upiInput) {
+    upiInput.addEventListener('input', () => {
+      updateQRPreview(upiInput.value, payeeInput ? payeeInput.value : currentPayee);
+    });
+  }
+  if (payeeInput) {
+    payeeInput.addEventListener('input', () => {
+      updateQRPreview(upiInput ? upiInput.value : currentUpiId, payeeInput.value);
+    });
+  }
+
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', () => {
+      updateQRPreview(upiInput ? upiInput.value : currentUpiId, payeeInput ? payeeInput.value : currentPayee);
+      showToast('QR Refreshed', 'Preview updated with current form values.', 'info');
+    });
+  }
+
+  if (form.dataset.upiHandlerAttached !== 'true') {
+    form.dataset.upiHandlerAttached = 'true';
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const newUpiId = (upiInput?.value || '').trim();
+      const newPayee = (payeeInput?.value || '').trim();
+
+      // Basic UPI ID validation (e.g. name@bank or number@upi)
+      const upiRegex = /^[\w.\-_]{2,256}@[a-zA-Z]{2,64}$/;
+      if (!newUpiId || !upiRegex.test(newUpiId)) {
+        showToast('Invalid UPI ID', 'Please enter a valid UPI ID (e.g. youragency@okaxis, 9876543210@paytm, or depot@icici).', 'error');
+        if (upiInput) upiInput.focus();
+        return;
+      }
+
+      if (!newPayee) {
+        showToast('Payee Name Required', 'Please enter the official business/payee name registered with this UPI ID.', 'error');
+        if (payeeInput) payeeInput.focus();
+        return;
+      }
+
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span>⏳</span><span>Saving UPI Settings...</span>';
+      }
+
+      try {
+        await updateDistributorProfile(distributorId, {
+          upiId: newUpiId,
+          upiPayeeName: newPayee
+        });
+
+        updateQRPreview(newUpiId, newPayee);
+        showToast('UPI Updated Successfully', `Customers will now see and scan QR code for ${newUpiId} during refill checkout.`, 'success');
+      } catch (err) {
+        console.error('Failed to update distributor UPI settings:', err);
+        showToast('Update Failed', err.message || 'Could not update UPI settings. Please try again.', 'error');
+      } finally {
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = '<span>💾</span><span>Save UPI Settings</span>';
+        }
+      }
+    });
   }
 }
 

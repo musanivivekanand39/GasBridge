@@ -515,6 +515,8 @@ export async function saveDistributor(distData) {
     state: distData.state || 'Telangana',
     pincode: primaryPincode,
     pincodes: storedPincodes,
+    upiId: distData.upiId || 'gasbridge.shadnagar@upi',
+    upiPayeeName: distData.upiPayeeName || distData.businessName || distData.name || 'GasBridge Depot',
     serviceAreaId: distData.serviceAreaId || '',
     serviceAreaIds: distData.serviceAreaIds || [],
     status: currentApprovalState,
@@ -580,6 +582,46 @@ export async function saveDistributor(distData) {
   localStorage.setItem(STORAGE_KEYS.DISTRIBUTORS, JSON.stringify(dists));
   invalidatePageDataCache();
   return cleanDist;
+}
+
+export async function updateDistributorProfile(distributorId, updateData) {
+  const existing = await getDistributorById(distributorId);
+  if (!existing) throw new Error('Distributor not found.');
+
+  const timestamp = new Date().toISOString();
+  const allowedKeys = ['name', 'businessName', 'contactPerson', 'mobile', 'address', 'city', 'district', 'state', 'upiId', 'upiPayeeName'];
+  const updatePayload = { updatedAt: timestamp };
+  for (const key of allowedKeys) {
+    if (key in updateData && updateData[key] !== undefined) {
+      updatePayload[key] = typeof updateData[key] === 'string' ? updateData[key].trim() : updateData[key];
+    }
+  }
+
+  // Attempt live Firestore update; if Firestore cloud rules haven't been published to console yet,
+  // catch and log warning, while always keeping local state, session and QR updated.
+  if (!persistLocally()) {
+    try {
+      await requireLiveWrite(() => updateDoc(doc(db, 'distributors', distributorId), updatePayload));
+    } catch (firestoreErr) {
+      console.warn('Firestore live write for distributor update rejected (rules might need publishing):', firestoreErr);
+      if (firestoreErr.code !== 'permission-denied') {
+        throw firestoreErr;
+      }
+    }
+  }
+
+  // Update in localStorage
+  const dists = JSON.parse(localStorage.getItem(STORAGE_KEYS.DISTRIBUTORS) || '[]');
+  const idx = dists.findIndex(d => d.id === distributorId);
+  const merged = { ...existing, ...updatePayload };
+  if (idx >= 0) {
+    dists[idx] = merged;
+  } else {
+    dists.push(merged);
+  }
+  localStorage.setItem(STORAGE_KEYS.DISTRIBUTORS, JSON.stringify(dists));
+  invalidatePageDataCache();
+  return merged;
 }
 
 export async function saveDeliveryAgent(agentData) {

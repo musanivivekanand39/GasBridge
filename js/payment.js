@@ -220,11 +220,21 @@ function ensurePaymentModalExists() {
 
           <!-- Dynamic Scannable QR Code Container -->
           <div style="text-align: center; margin-bottom: .75rem;">
-            <div id="qr-code-svg-container" style="display: inline-block; padding: 8px; background: white; border: 2px solid #e2e8f0; border-radius: var(--radius-lg); box-shadow: 0 4px 14px rgba(0,0,0,0.06);">
+            <div id="qr-code-svg-container" style="display: inline-block; padding: 10px; background: white; border: 2px solid #e2e8f0; border-radius: var(--radius-lg); box-shadow: 0 4px 14px rgba(0,0,0,0.06);">
               <!-- SVG QR inserted dynamically -->
             </div>
-            <div id="qr-scan-help" style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.35rem;">
-              Scan with Google Lens, then tap the GasBridge payment link to continue.
+
+            <!-- Distributor UPI Details Badge -->
+            <div id="qr-distributor-upi-box" style="margin-top: 0.65rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius-md); padding: 0.5rem 0.75rem; text-align: center; font-size: 0.82rem;">
+              <div style="color: var(--text-muted); font-size: 0.74rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em;">Authorized Depot UPI</div>
+              <strong id="qr-distributor-payee" style="color: var(--text-main); display: block; font-size: 0.9rem; margin-top: 0.15rem;">-</strong>
+              <div style="margin-top: 0.2rem;">
+                <code id="qr-distributor-vpa" style="background: white; border: 1px solid #86efac; color: #15803d; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.84rem;">-</code>
+              </div>
+            </div>
+
+            <div id="qr-scan-help" style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.45rem;">
+              Scan using any UPI App (Google Pay, PhonePe, Paytm, BHIM)
             </div>
             <a id="qr-open-payment-link" href="#" target="_blank" rel="noopener noreferrer" style="display:none; margin-top:0.45rem; font-size:0.85rem; font-weight:700;">Open payment link</a>
             <div id="qr-live-waiting" style="display:none; margin-top:0.55rem; font-size:0.9rem; font-weight:700; color:#166534;">
@@ -617,22 +627,36 @@ async function beginSelectedPayment(paymentMethod) {
       return;
     }
   }
-  // Use an absolute public route so scanners opened from another device or
-  // browser cannot resolve the payment path relative to the current page.
-  const confirmationOrigin = firebaseConfig.projectId
-    ? `https://${firebaseConfig.projectId}.web.app`
-    : window.location.origin;
-  const confirmationUrl = new URL('/pages/payment-confirm.html', confirmationOrigin);
-  confirmationUrl.searchParams.set('bookingId', bookingId);
-  confirmationUrl.searchParams.set('confirmationId', confirmationId || bookingId);
-  confirmationUrl.searchParams.set('token', confirmationToken);
-  if (isDemo) confirmationUrl.searchParams.set('offline', '1');
-  qrPayload = confirmationUrl.href;
+  // Fetch distributor's real UPI ID and business name
+  let distributor = null;
+  if (context.distributorId) {
+    try {
+      distributor = await getDistributorById(context.distributorId);
+    } catch (e) {
+      console.warn('Could not load distributor profile for UPI:', e);
+    }
+  }
+
+  const distUpiId = (distributor?.upiId || 'gasbridge.shadnagar@upi').trim();
+  const distPayee = (distributor?.upiPayeeName || distributor?.businessName || distributor?.name || 'GasBridge LPG Depot').trim();
+
+  // Populate Distributor UPI Info Badge
+  const payeeEl = modal.querySelector('#qr-distributor-payee');
+  const vpaEl = modal.querySelector('#qr-distributor-vpa');
+  if (payeeEl) payeeEl.textContent = distPayee;
+  if (vpaEl) vpaEl.textContent = distUpiId;
+
+  // Real UPI deep link URI (NPCI standard specification: upi://pay)
+  // Encodes: payee VPA (pa), payee name (pn), amount (am), transaction ref (tr), currency (cu), transaction note (tn)
+  const upiIntentUri = `upi://pay?pa=${encodeURIComponent(distUpiId)}&pn=${encodeURIComponent(distPayee)}&am=${encodeURIComponent(context.totalAmount.toFixed(2))}&cu=INR&tr=${encodeURIComponent(currentTransactionRef)}&tn=${encodeURIComponent(`Refill LPG ${bookingId}`)}`;
+
+  // Use the standard UPI payload for the scannable QR code
+  qrPayload = upiIntentUri;
 
   const qrSvg = generateQRCodeSVG(qrPayload, {
     size: 190,
     margin: 4,
-    darkColor: "#000000"
+    darkColor: "#0f172a"
   });
 
   const svgContainer = modal.querySelector('#qr-code-svg-container');
@@ -640,15 +664,15 @@ async function beginSelectedPayment(paymentMethod) {
   const paymentLink = modal.querySelector('#qr-open-payment-link');
   if (paymentLink) {
     paymentLink.style.display = 'inline-block';
-    paymentLink.href = qrPayload;
+    paymentLink.href = upiIntentUri;
+    paymentLink.textContent = 'Pay via UPI App (on this phone)';
   }
 
-  modal.querySelector('#btn-scanned-qr').style.display = isDemo ? 'block' : 'none';
-  modal.querySelector('#btn-simulate-fail').style.display = isDemo ? 'block' : 'none';
+  modal.querySelector('#btn-scanned-qr').style.display = 'block';
+  modal.querySelector('#btn-simulate-fail').style.display = 'block';
   modal.querySelector('#qr-live-waiting').style.display = isDemo ? 'none' : 'block';
-  modal.querySelector('#qr-scan-help').textContent = isDemo
-    ? 'Scan this QR, then confirm the simulated payment here. No real charge will be made.'
-    : 'Scan with Google Lens and open the GasBridge link. Confirm the simulated payment here.';
+  modal.querySelector('#qr-scan-help').textContent =
+    `Scan with any UPI App (GPay, PhonePe, Paytm) to pay ${formatCurrency(context.totalAmount)} directly to ${distUpiId}.`;
 
   switchView('qr');
   modal.classList.add('active');

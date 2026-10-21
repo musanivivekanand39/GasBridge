@@ -152,7 +152,7 @@ service cloud.firestore {
       allow create: if signedIn() && request.resource.data.userId == request.auth.uid && cleanProfile() && request.resource.data.status == 'pending';
       allow update: if admin() || (role() == 'distributor' && resource.data.userId == request.auth.uid &&
         request.resource.data.status == resource.data.status && request.resource.data.approvalStatus == resource.data.approvalStatus &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'businessName', 'contactPerson', 'mobile', 'address', 'city', 'district', 'state', 'updatedAt']));
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'businessName', 'contactPerson', 'mobile', 'address', 'city', 'district', 'state', 'upiId', 'upiPayeeName', 'updatedAt']));
       allow delete: if admin();
     }
 
