@@ -43,7 +43,15 @@ import {
 } from "./firestore.js";
 
 import { ADMIN_CONFIG } from "./firebase-config.js";
-import { showToast, initInactivityTimer } from "./utils.js";
+import { 
+  showToast, 
+  initInactivityTimer, 
+  validateName, 
+  validateEmail, 
+  validateMobile, 
+  validatePassword, 
+  validateAddress 
+} from "./utils.js";
 
 const ACTIVE_USER_KEY = 'gasbridge_active_user';
 
@@ -467,8 +475,20 @@ export async function registerCustomer(formData) {
   } = formData;
 
   // 1. Mandatory validation
-  if (!name || !mobile || !email || !password || !houseNo || !street || !area || !city || !district || !state || !pincode) {
-    throw new Error("All fields including full address and pincode are required.");
+  const nameError = validateName(name);
+  if (nameError) throw new Error(nameError);
+
+  const mobileError = validateMobile(mobile);
+  if (mobileError) throw new Error(mobileError);
+
+  const emailError = validateEmail(email);
+  if (emailError) throw new Error(emailError);
+
+  const passError = validatePassword(password);
+  if (passError) throw new Error(passError);
+
+  if (!houseNo || !street || !area || !city || !district || !state || !pincode) {
+    throw new Error("Complete delivery address (house/flat, street, area, city, district, state, and pincode) is required.");
   }
 
   // Mandatory Cylinder Type validation (Rule 10, 11)
@@ -478,14 +498,6 @@ export async function registerCustomer(formData) {
   }
 
   const cleanMobile = mobile.replace(/[^0-9]/g, '');
-  if (cleanMobile.length !== 10) {
-    throw new Error("Please enter a valid 10-digit mobile number.");
-  }
-
-  if (password.length < 8) {
-    throw new Error("Password must be at least 8 characters long.");
-  }
-
   const cleanEmail = email.trim().toLowerCase();
 
   // 2. Validate Pincode and resolve service area & authorized distributor (Rule 12)
@@ -669,13 +681,21 @@ export async function registerDistributor(formData) {
   const cleanEmail = String(email || '').trim().toLowerCase();
   const cleanMobile = String(mobile || '').replace(/[^0-9]/g, '');
 
-  if (!distName || !contactName || !cleanEmail || !password || cleanMobile.length !== 10) {
-    throw new Error("Full name, business name, official email, 10-digit mobile, and password are required.");
+  const nameError = validateName(contactName);
+  if (nameError) throw new Error(`Contact Person ${nameError}`);
+
+  if (!distName || distName.length < 3) {
+    throw new Error("Distributor / Business Name is required (minimum 3 characters).");
   }
 
-  if (password.length < 8) {
-    throw new Error("Password must be at least 8 characters long.");
-  }
+  const mobileError = validateMobile(mobile);
+  if (mobileError) throw new Error(mobileError);
+
+  const emailError = validateEmail(cleanEmail);
+  if (emailError) throw new Error(emailError);
+
+  const passError = validatePassword(password);
+  if (passError) throw new Error(passError);
 
   const pincodeList = collectValidPincodes(pincodes, pincode);
   if (pincodeList.length === 0) throw new Error('Enter at least one 6-digit service pincode.');
@@ -818,15 +838,19 @@ export async function registerDeliveryAgent(formData) {
   const cleanPin = String(pincode || '').trim();
   let assignedDistId = distributorId || selectedDistributorId;
 
-  if (!agentName || !cleanEmail || !password || cleanMobile.length !== 10) {
-    throw new Error("Full name, email, mobile, and password are required.");
-  }
+  const nameError = validateName(agentName);
+  if (nameError) throw new Error(nameError);
+
+  const emailError = validateEmail(cleanEmail);
+  if (emailError) throw new Error(emailError);
+
+  const mobileError = validateMobile(cleanMobile);
+  if (mobileError) throw new Error(mobileError);
+
+  const passError = validatePassword(password);
+  if (passError) throw new Error(passError);
 
   if (!/^\d{6}$/.test(cleanPin)) throw new Error('Enter a valid 6-digit operating pincode.');
-
-  if (password.length < 8) {
-    throw new Error("Password must be at least 8 characters long.");
-  }
 
   // Resolve distributor if not manually chosen
   if (!assignedDistId) {

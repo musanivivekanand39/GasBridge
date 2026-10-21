@@ -21,7 +21,7 @@ import {
   getDistributorById,
   createNotification
 } from "./firestore.js";
-import { formatCurrency, formatDateTime, showToast, generateBookingId } from "./utils.js";
+import { formatCurrency, formatDateTime, showToast, generateBookingId, validateName, validatePin4, setFieldValidation } from "./utils.js";
 import { generateQRCodeSVG } from "./qrcode.js";
 import { isDemo } from "./firebase.js";
 import { firebaseConfig } from "./firebase-config.js";
@@ -175,19 +175,23 @@ function ensurePaymentModalExists() {
           <div class="form-group">
             <label for="cardholder-name">Cardholder name</label>
             <input id="cardholder-name" class="form-control" type="text" autocomplete="off" required>
+            <div class="field-error" id="error-cardholder-name"></div>
           </div>
           <div class="form-group">
             <label for="card-number">Credit / debit card number</label>
             <input id="card-number" class="form-control" type="text" inputmode="numeric" autocomplete="off" maxlength="23" placeholder="Enter card number" required>
+            <div class="field-error" id="error-card-number"></div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1rem;">
             <div class="form-group" style="margin:0;">
               <label for="card-expiry">Expiry (MM/YY)</label>
               <input id="card-expiry" class="form-control" type="text" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="MM/YY" required>
+              <div class="field-error" id="error-card-expiry"></div>
             </div>
             <div class="form-group" style="margin:0;">
               <label for="card-cvv">CVV</label>
               <input id="card-cvv" class="form-control" type="password" inputmode="numeric" autocomplete="new-password" maxlength="4" placeholder="CVV" required>
+              <div class="field-error" id="error-card-cvv"></div>
             </div>
           </div>
           <div style="display:flex;gap:.65rem;"><button class="btn btn-outline" type="button" id="btn-card-back">Back to booking</button><button class="btn btn-primary" type="button" id="btn-card-pay" style="flex:1;">Complete simulated payment</button></div>
@@ -438,28 +442,70 @@ function closeModalHandler() {
 }
 
 function validateCardEntry(modal) {
-  const name = modal.querySelector('#cardholder-name').value.trim();
-  const number = modal.querySelector('#card-number').value.replace(/\D/g, '');
-  const expiry = modal.querySelector('#card-expiry').value.trim();
-  const cvv = modal.querySelector('#card-cvv').value.trim();
-  if (!name) return 'Enter the cardholder name.';
-  if (!/^\d{13,19}$/.test(number)) return 'Enter a card number containing 13 to 19 digits.';
-  const expiryMatch = /^(0[1-9]|1[0-2])\/(\d{2})$/.exec(expiry);
-  if (!expiryMatch) return 'Enter the expiry date in MM/YY format.';
-  const expiryMonth = Number(expiryMatch[1]);
-  const expiryYear = 2000 + Number(expiryMatch[2]);
-  const now = new Date();
-  if (expiryYear < now.getFullYear() || (expiryYear === now.getFullYear() && expiryMonth < now.getMonth() + 1)) {
-    return 'The card expiry date has passed.';
+  const nameEl = modal.querySelector('#cardholder-name');
+  const numberEl = modal.querySelector('#card-number');
+  const expiryEl = modal.querySelector('#card-expiry');
+  const cvvEl = modal.querySelector('#card-cvv');
+
+  const name = nameEl.value.trim();
+  const number = numberEl.value.replace(/\D/g, '');
+  const expiry = expiryEl.value.trim();
+  const cvv = cvvEl.value.trim();
+
+  let firstError = '';
+
+  const nameErr = validateName(name);
+  if (nameErr) {
+    setFieldValidation(nameEl, 'error-cardholder-name', nameErr);
+    if (!firstError) firstError = nameErr;
+  } else {
+    setFieldValidation(nameEl, 'error-cardholder-name', '');
   }
-  if (!/^\d{3,4}$/.test(cvv)) return 'Enter a 3 or 4 digit CVV.';
-  return '';
+
+  if (!/^\d{13,19}$/.test(number)) {
+    const numErr = 'Enter a valid card number containing 13 to 19 digits.';
+    setFieldValidation(numberEl, 'error-card-number', numErr);
+    if (!firstError) firstError = numErr;
+  } else {
+    setFieldValidation(numberEl, 'error-card-number', '');
+  }
+
+  const expiryMatch = /^(0[1-9]|1[0-2])\/(\d{2})$/.exec(expiry);
+  if (!expiryMatch) {
+    const expErr = 'Enter expiry in MM/YY format.';
+    setFieldValidation(expiryEl, 'error-card-expiry', expErr);
+    if (!firstError) firstError = expErr;
+  } else {
+    const expiryMonth = Number(expiryMatch[1]);
+    const expiryYear = 2000 + Number(expiryMatch[2]);
+    const now = new Date();
+    if (expiryYear < now.getFullYear() || (expiryYear === now.getFullYear() && expiryMonth < now.getMonth() + 1)) {
+      const expErr = 'The card expiry date has passed.';
+      setFieldValidation(expiryEl, 'error-card-expiry', expErr);
+      if (!firstError) firstError = expErr;
+    } else {
+      setFieldValidation(expiryEl, 'error-card-expiry', '');
+    }
+  }
+
+  if (!/^\d{3,4}$/.test(cvv)) {
+    const cvvErr = 'Enter a 3 or 4 digit CVV/PIN.';
+    setFieldValidation(cvvEl, 'error-card-cvv', cvvErr);
+    if (!firstError) firstError = cvvErr;
+  } else {
+    setFieldValidation(cvvEl, 'error-card-cvv', '');
+  }
+
+  return firstError;
 }
 
 function clearCardEntry(modal) {
   ['#cardholder-name', '#card-number', '#card-expiry', '#card-cvv'].forEach(selector => {
     const input = modal.querySelector(selector);
-    if (input) input.value = '';
+    if (input) {
+      input.value = '';
+      setFieldValidation(input, `error-${input.id}`, '');
+    }
   });
 }
 

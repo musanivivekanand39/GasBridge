@@ -789,3 +789,27 @@ img {
 .toast-content { flex-grow: 1; }
 .toast-title { font-weight: 700; margin-bottom: 0.2rem; }
 .toast-close { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.1rem; line-height: 1; }
+
+/* Global Field Error Messages */
+.field-error {
+  color: #dc2626;
+  font-size: 0.78rem;
+  font-weight: 500;
+  margin-top: 0.3rem;
+  display: none;
+  line-height: 1.35;
+}
+
+.field-error.active {
+  display: block;
+}
+
+.form-control.input-error {
+  border-color: #ef4444 !important;
+  background-color: #fef2f2 !important;
+}
+
+.form-control.input-error:focus {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18) !important;
+}

@@ -24,7 +24,7 @@ import {
   getPendingDistributors,
   getPendingDeliveryAgents
 } from "./firestore.js";
-import { formatCurrency, formatDateTime, getStatusBadgeHTML, showToast, escapeHTML, openModal, closeModal } from "./utils.js";
+import { formatCurrency, formatDateTime, getStatusBadgeHTML, showToast, escapeHTML, openModal, closeModal, validateName, setFieldValidation } from "./utils.js";
 
 // Initialize Admin Dashboard
 export async function initAdminDashboard() {
@@ -383,15 +383,56 @@ export async function initAdminServiceAreasPage() {
   // Add Service Area Form
   const form = document.getElementById('add-service-area-form');
   if (form) {
+    const nameInp = document.getElementById('new-sa-name');
+    const cityInp = document.getElementById('new-sa-city');
+    const districtInp = document.getElementById('new-sa-district');
+    const pincodesInp = document.getElementById('new-sa-pincodes');
+    const distSelect = document.getElementById('new-sa-distributor');
+
+    [nameInp, cityInp, districtInp, pincodesInp, distSelect].filter(Boolean).forEach(inp => {
+      inp.addEventListener('input', () => setFieldValidation(inp, `error-${inp.id}`, ''));
+    });
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const name = document.getElementById('new-sa-name').value.trim();
-      const city = document.getElementById('new-sa-city').value.trim();
-      const district = document.getElementById('new-sa-district').value.trim();
-      const pincodesStr = document.getElementById('new-sa-pincodes').value.trim();
-      const distId = document.getElementById('new-sa-distributor').value;
+      const name = nameInp.value.trim();
+      const city = cityInp.value.trim();
+      const district = districtInp.value.trim();
+      const pincodesStr = pincodesInp.value.trim();
+      const distId = distSelect.value;
+
+      let isAreaValid = true;
+
+      const nameErr = validateName(name);
+      if (nameErr) { setFieldValidation(nameInp, 'error-new-sa-name', nameErr); isAreaValid = false; }
+      else setFieldValidation(nameInp, 'error-new-sa-name', '');
+
+      if (!city) { setFieldValidation(cityInp, 'error-new-sa-city', 'City is required.'); isAreaValid = false; }
+      else setFieldValidation(cityInp, 'error-new-sa-city', '');
+
+      if (!district) { setFieldValidation(districtInp, 'error-new-sa-district', 'District is required.'); isAreaValid = false; }
+      else setFieldValidation(districtInp, 'error-new-sa-district', '');
 
       const pincodes = pincodesStr.split(',').map(p => p.trim()).filter(Boolean);
+      const invalidPins = pincodes.filter(p => !/^\d{6}$/.test(p));
+      if (pincodes.length === 0 || invalidPins.length > 0) {
+        setFieldValidation(pincodesInp, 'error-new-sa-pincodes', 'Enter valid 6-digit postal pincodes separated by comma.');
+        isAreaValid = false;
+      } else {
+        setFieldValidation(pincodesInp, 'error-new-sa-pincodes', '');
+      }
+
+      if (!distId) {
+        setFieldValidation(distSelect, 'error-new-sa-distributor', 'Select an authorized distributor.');
+        isAreaValid = false;
+      } else {
+        setFieldValidation(distSelect, 'error-new-sa-distributor', '');
+      }
+
+      if (!isAreaValid) {
+        showToast("Invalid Input", "Please correct the highlighted errors.", "warning");
+        return;
+      }
 
       const newArea = {
         id: "sa-" + Date.now().toString().slice(-4),

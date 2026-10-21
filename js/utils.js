@@ -167,3 +167,141 @@ export function initModalListeners() {
     }
   });
 }
+
+/**
+ * --------------------------------------------------------------------------
+ * Standard Input Validation Suite
+ * --------------------------------------------------------------------------
+ */
+
+// Name: Only letters and spaces, minimum 3 characters
+export function validateName(name) {
+  const trimmed = String(name || '').trim();
+  if (!trimmed) return 'Name is required.';
+  if (!/^[A-Za-z\s]+$/.test(trimmed)) {
+    return 'Name must contain only letters and spaces.';
+  }
+  if (trimmed.length < 3) {
+    return 'Name must be at least 3 characters long.';
+  }
+  return '';
+}
+
+// Email: Must follow a valid email format
+export function validateEmail(email) {
+  const trimmed = String(email || '').trim();
+  if (!trimmed) return 'Email address is required.';
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(trimmed)) {
+    return 'Please enter a valid email address.';
+  }
+  return '';
+}
+
+// Mobile Number: Exactly 10 digits and must start with 6, 7, 8, or 9
+export function validateMobile(mobile) {
+  const digits = String(mobile || '').replace(/\D/g, '');
+  if (!digits) return 'Mobile number is required.';
+  if (!/^[6-9]\d{9}$/.test(digits)) {
+    return 'Mobile number must be exactly 10 digits and start with 6, 7, 8, or 9.';
+  }
+  return '';
+}
+
+// Password: Minimum 8 characters, at least 1 uppercase, 1 lowercase, 1 number, 1 special char
+export function validatePassword(password) {
+  const pass = String(password || '');
+  if (!pass) return 'Password is required.';
+  if (pass.length < 8) {
+    return 'Password must be at least 8 characters long.';
+  }
+  if (!/[A-Z]/.test(pass)) {
+    return 'Password must contain at least one uppercase letter (A-Z).';
+  }
+  if (!/[a-z]/.test(pass)) {
+    return 'Password must contain at least one lowercase letter (a-z).';
+  }
+  if (!/[0-9]/.test(pass)) {
+    return 'Password must contain at least one number (0-9).';
+  }
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pass)) {
+    return 'Password must contain at least one special character (!@#$%^&* etc.).';
+  }
+  return '';
+}
+
+// Confirm Password: Must match password
+export function validateConfirmPassword(password, confirmPassword) {
+  if (!confirmPassword) return 'Please confirm your password.';
+  if (password !== confirmPassword) {
+    return 'Passwords do not match.';
+  }
+  return '';
+}
+
+// Username: Allow letters, numbers, and underscores
+export function validateUsername(username) {
+  const trimmed = String(username || '').trim();
+  if (!trimmed) return 'Username is required.';
+  if (!/^[A-Za-z0-9_]+$/.test(trimmed)) {
+    return 'Username can only contain letters, numbers, and underscores.';
+  }
+  if (trimmed.length < 3) {
+    return 'Username must be at least 3 characters long.';
+  }
+  return '';
+}
+
+// Address: Must not be empty when required
+export function validateAddress(address) {
+  const trimmed = String(address || '').trim();
+  if (!trimmed) return 'Address is required.';
+  if (trimmed.length < 5) return 'Please enter a complete address.';
+  return '';
+}
+
+// PIN: Exactly 4 digits wherever a 4-digit PIN is required
+export function validatePin4(pin) {
+  const trimmed = String(pin || '').trim();
+  if (!trimmed) return 'PIN is required.';
+  if (!/^\d{4}$/.test(trimmed)) {
+    return 'PIN must be exactly 4 digits.';
+  }
+  return '';
+}
+
+// OTP: Validate according to authentication requirements (typically 6-digit numeric)
+export function validateOtp(otp, length = 6) {
+  const trimmed = String(otp || '').trim();
+  if (!trimmed) return 'OTP is required.';
+  const regex = new RegExp(`^\\d{${length}}$`);
+  if (!regex.test(trimmed)) {
+    return `OTP must be exactly ${length} digits.`;
+  }
+  return '';
+}
+
+// Helper to attach or display inline field errors
+export function setFieldValidation(inputEl, errorElOrId, errorMessage) {
+  const errorEl = typeof errorElOrId === 'string' ? document.getElementById(errorElOrId) : errorElOrId;
+  if (inputEl) {
+    if (errorMessage) {
+      inputEl.classList.add('input-error');
+      inputEl.setAttribute('aria-invalid', 'true');
+    } else {
+      inputEl.classList.remove('input-error');
+      inputEl.removeAttribute('aria-invalid');
+    }
+  }
+  if (errorEl) {
+    if (errorMessage) {
+      errorEl.textContent = errorMessage;
+      errorEl.classList.add('active');
+      errorEl.style.display = 'block';
+    } else {
+      errorEl.textContent = '';
+      errorEl.classList.remove('active');
+      errorEl.style.display = 'none';
+    }
+  }
+}

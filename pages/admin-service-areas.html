@@ -135,33 +135,38 @@
         <h3>Add Service Area</h3>
         <button class="btn-icon" data-close-modal>&times;</button>
       </div>
-      <form id="add-service-area-form">
+      <form id="add-service-area-form" novalidate>
         <div class="modal-body">
           <div class="form-group">
             <label for="new-sa-name">Service Area Name *</label>
             <input type="text" id="new-sa-name" class="form-control" placeholder="e.g. Shadnagar Central" required>
+            <div class="field-error" id="error-new-sa-name"></div>
           </div>
 
           <div class="form-row">
             <div class="form-group">
               <label for="new-sa-city">City *</label>
               <input type="text" id="new-sa-city" class="form-control" placeholder="e.g. Shadnagar" required>
+              <div class="field-error" id="error-new-sa-city"></div>
             </div>
             <div class="form-group">
               <label for="new-sa-district">District *</label>
               <input type="text" id="new-sa-district" class="form-control" placeholder="e.g. Rangareddy" required>
+              <div class="field-error" id="error-new-sa-district"></div>
             </div>
           </div>
 
           <div class="form-group">
             <label for="new-sa-pincodes">Pincodes (Comma separated) *</label>
             <input type="text" id="new-sa-pincodes" class="form-control" placeholder="e.g. 509216, 509217" required>
+            <div class="field-error" id="error-new-sa-pincodes"></div>
             <div class="form-help">Customers with any of these pincodes will be auto-routed here.</div>
           </div>
 
           <div class="form-group">
             <label for="new-sa-distributor">Authorized Distributor *</label>
             <select id="new-sa-distributor" class="form-control" required></select>
+            <div class="field-error" id="error-new-sa-distributor"></div>
           </div>
         </div>
 

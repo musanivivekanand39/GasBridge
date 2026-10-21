@@ -146,7 +146,7 @@
               <div class="form-row">
                 <div class="form-group">
                   <label for="reg-name">Full Name *</label>
-                  <input type="text" id="reg-name" class="form-control" placeholder="e.g. Ramesh Sharma" required autocomplete="name">
+                  <input type="text" id="reg-name" class="form-control" placeholder="e.g. Ramesh Sharma" required autocomplete="name" pattern="^[A-Za-z\s.'-]+$" title="Full name should only contain letters and spaces (no numbers)">
                   <div class="field-error" id="error-reg-name"></div>
                 </div>
                 <div class="form-group">
@@ -174,6 +174,14 @@
                     </button>
                   </div>
                   <div class="field-error" id="error-reg-password"></div>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group" style="grid-column: 1 / -1;">
+                  <label for="reg-confirm-password">Confirm Password *</label>
+                  <input type="password" id="reg-confirm-password" class="form-control" minlength="8" placeholder="Re-enter your password" required autocomplete="new-password">
+                  <div class="field-error" id="error-reg-confirm-password"></div>
                 </div>
               </div>
 
@@ -355,7 +363,7 @@
             <div class="form-row">
               <div class="form-group">
                 <label for="dist-contact-person">Full Name *</label>
-                <input type="text" id="dist-contact-person" class="form-control" placeholder="e.g. K. Venkatesh" required>
+                <input type="text" id="dist-contact-person" class="form-control" placeholder="e.g. K. Venkatesh" required pattern="^[A-Za-z\s.'-]+$" title="Full name should only contain letters and spaces (no numbers)">
                 <div class="field-error" id="error-dist-contact-person"></div>
               </div>
               <div class="form-group">
@@ -375,6 +383,14 @@
                 <label for="dist-password">Password *</label>
                 <input type="password" id="dist-password" class="form-control" minlength="8" placeholder="At least 8 characters" required>
                 <div class="field-error" id="error-dist-password"></div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group" style="grid-column: 1 / -1;">
+                <label for="dist-confirm-password">Confirm Password *</label>
+                <input type="password" id="dist-confirm-password" class="form-control" minlength="8" placeholder="Re-enter your password" required>
+                <div class="field-error" id="error-dist-confirm-password"></div>
               </div>
             </div>
 
@@ -434,7 +450,7 @@
             <div class="form-row">
               <div class="form-group">
                 <label for="agent-name">Full Name *</label>
-                <input type="text" id="agent-name" class="form-control" placeholder="e.g. Mahesh Goud" required>
+                <input type="text" id="agent-name" class="form-control" placeholder="e.g. Mahesh Goud" required pattern="^[A-Za-z\s.'-]+$" title="Full name should only contain letters and spaces (no numbers)">
                 <div class="field-error" id="error-agent-name"></div>
               </div>
               <div class="form-group">
@@ -454,6 +470,14 @@
                 <label for="agent-password">Password *</label>
                 <input type="password" id="agent-password" class="form-control" minlength="8" placeholder="At least 8 characters" required>
                 <div class="field-error" id="error-agent-password"></div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group" style="grid-column: 1 / -1;">
+                <label for="agent-confirm-password">Confirm Password *</label>
+                <input type="password" id="agent-confirm-password" class="form-control" minlength="8" placeholder="Re-enter your password" required>
+                <div class="field-error" id="error-agent-confirm-password"></div>
               </div>
             </div>
 
@@ -530,7 +554,14 @@
   <script type="module">
     import { registerCustomer, registerDistributor, registerDeliveryAgent } from "../js/auth.js";
     import { resolveServiceAreaByPincode, getDistributors } from "../js/firestore.js";
-    import { showToast } from "../js/utils.js";
+    import { 
+      showToast, 
+      validateName, 
+      validateEmail, 
+      validateMobile, 
+      validatePassword, 
+      validateConfirmPassword 
+    } from "../js/utils.js";
 
     // --------------------------------------------------------------------------
     // Role Switching
@@ -660,6 +691,7 @@
     const mobileInput = document.getElementById('reg-mobile');
     const emailInput = document.getElementById('reg-email');
     const passwordInput = document.getElementById('reg-password');
+    const confirmPasswordInput = document.getElementById('reg-confirm-password');
     const togglePasswordBtn = document.getElementById('toggle-password');
 
     // Step 2 Inputs
@@ -707,7 +739,34 @@
       }
     }
 
-    [nameInput, mobileInput, emailInput, passwordInput, houseNoInput, streetInput, areaInput, cityInput, districtInput, stateInput, pincodeInput].forEach(inp => {
+    // Restrict full name input fields: only letters, spaces, dots, hyphens, apostrophes (no numbers)
+    const nameFields = [nameInput, document.getElementById('dist-contact-person'), document.getElementById('agent-name')];
+    nameFields.forEach(inp => {
+      if (inp) {
+        inp.addEventListener('input', () => {
+          // Immediately strip numeric characters if entered or pasted
+          const filtered = inp.value.replace(/[0-9]/g, '');
+          if (filtered !== inp.value) {
+            inp.value = filtered;
+          }
+        });
+      }
+    });
+
+    [
+      nameInput, mobileInput, emailInput, passwordInput, confirmPasswordInput,
+      houseNoInput, streetInput, areaInput, cityInput, districtInput, stateInput, pincodeInput,
+      document.getElementById('dist-contact-person'), document.getElementById('dist-mobile'),
+      document.getElementById('dist-email'), document.getElementById('dist-password'),
+      document.getElementById('dist-confirm-password'), document.getElementById('dist-agency-name'),
+      document.getElementById('dist-address'), document.getElementById('dist-city'),
+      document.getElementById('dist-district'), document.getElementById('dist-state'),
+      document.getElementById('dist-pincode'),
+      document.getElementById('agent-name'), document.getElementById('agent-mobile'),
+      document.getElementById('agent-email'), document.getElementById('agent-password'),
+      document.getElementById('agent-confirm-password'), document.getElementById('agent-address'),
+      document.getElementById('agent-pincode'), document.getElementById('agent-distributor-select')
+    ].filter(Boolean).forEach(inp => {
       inp.addEventListener('input', () => {
         setFieldError(inp, `error-${inp.id}`, null);
       });
@@ -840,30 +899,40 @@
     function validateStep1() {
       let isValid = true;
       const name = nameInput.value.trim();
-      const mobile = mobileInput.value.trim().replace(/\D/g, '');
+      const mobile = mobileInput.value.trim();
       const email = emailInput.value.trim();
       const password = passwordInput.value;
+      const confirmPassword = confirmPasswordInput ? confirmPasswordInput.value : '';
 
-      if (!name) {
-        setFieldError(nameInput, 'error-reg-name', 'Please enter your full name.');
+      const nameErr = validateName(name);
+      if (nameErr) {
+        setFieldError(nameInput, 'error-reg-name', nameErr);
         isValid = false;
       } else setFieldError(nameInput, 'error-reg-name', null);
 
-      if (!mobile || mobile.length !== 10) {
-        setFieldError(mobileInput, 'error-reg-mobile', 'Please enter a valid 10-digit mobile number.');
+      const mobileErr = validateMobile(mobile);
+      if (mobileErr) {
+        setFieldError(mobileInput, 'error-reg-mobile', mobileErr);
         isValid = false;
       } else setFieldError(mobileInput, 'error-reg-mobile', null);
 
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!email || !emailRegex.test(email)) {
-        setFieldError(emailInput, 'error-reg-email', 'Please enter a valid email address.');
+      const emailErr = validateEmail(email);
+      if (emailErr) {
+        setFieldError(emailInput, 'error-reg-email', emailErr);
         isValid = false;
       } else setFieldError(emailInput, 'error-reg-email', null);
 
-      if (!password || password.length < 8) {
-        setFieldError(passwordInput, 'error-reg-password', 'Password must be at least 8 characters long.');
+      const passErr = validatePassword(password);
+      if (passErr) {
+        setFieldError(passwordInput, 'error-reg-password', passErr);
         isValid = false;
       } else setFieldError(passwordInput, 'error-reg-password', null);
+
+      const confirmErr = validateConfirmPassword(password, confirmPassword);
+      if (confirmErr) {
+        setFieldError(confirmPasswordInput, 'error-reg-confirm-password', confirmErr);
+        isValid = false;
+      } else setFieldError(confirmPasswordInput, 'error-reg-confirm-password', null);
 
       return isValid;
     }
@@ -1054,19 +1123,73 @@
     distForm.addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      const contactPerson = document.getElementById('dist-contact-person').value.trim();
-      const mobile = document.getElementById('dist-mobile').value.trim();
-      const email = document.getElementById('dist-email').value.trim();
-      const password = document.getElementById('dist-password').value;
-      const businessName = document.getElementById('dist-agency-name').value.trim();
-      const address = document.getElementById('dist-address').value.trim();
-      const city = document.getElementById('dist-city').value.trim();
-      const district = document.getElementById('dist-district').value.trim();
-      const state = document.getElementById('dist-state').value.trim();
-      const pincode = document.getElementById('dist-pincode').value.trim();
+      const contactPersonInput = document.getElementById('dist-contact-person');
+      const mobileInput = document.getElementById('dist-mobile');
+      const emailInput = document.getElementById('dist-email');
+      const passwordInput = document.getElementById('dist-password');
+      const confirmPasswordInput = document.getElementById('dist-confirm-password');
+      const agencyNameInput = document.getElementById('dist-agency-name');
+      const addressInput = document.getElementById('dist-address');
+      const cityInput = document.getElementById('dist-city');
+      const districtInput = document.getElementById('dist-district');
+      const stateInput = document.getElementById('dist-state');
+      const pincodeInput = document.getElementById('dist-pincode');
 
-      if (!contactPerson || !mobile || !email || !password || !businessName || !address || !city || !district || !pincode) {
-        showToast("Incomplete Form", "Please fill in all personal and business fields.", "warning");
+      const contactPerson = contactPersonInput.value.trim();
+      const mobile = mobileInput.value.trim();
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+      const confirmPassword = confirmPasswordInput ? confirmPasswordInput.value : '';
+      const businessName = agencyNameInput.value.trim();
+      const address = addressInput.value.trim();
+      const city = cityInput.value.trim();
+      const district = districtInput.value.trim();
+      const state = stateInput.value.trim();
+      const pincode = pincodeInput.value.trim();
+
+      let isDistValid = true;
+
+      const nameErr = validateName(contactPerson);
+      if (nameErr) { setFieldError(contactPersonInput, 'error-dist-contact-person', nameErr); isDistValid = false; }
+      else setFieldError(contactPersonInput, 'error-dist-contact-person', null);
+
+      const mobileErr = validateMobile(mobile);
+      if (mobileErr) { setFieldError(mobileInput, 'error-dist-mobile', mobileErr); isDistValid = false; }
+      else setFieldError(mobileInput, 'error-dist-mobile', null);
+
+      const emailErr = validateEmail(email);
+      if (emailErr) { setFieldError(emailInput, 'error-dist-email', emailErr); isDistValid = false; }
+      else setFieldError(emailInput, 'error-dist-email', null);
+
+      const passErr = validatePassword(password);
+      if (passErr) { setFieldError(passwordInput, 'error-dist-password', passErr); isDistValid = false; }
+      else setFieldError(passwordInput, 'error-dist-password', null);
+
+      const confirmErr = validateConfirmPassword(password, confirmPassword);
+      if (confirmErr) { setFieldError(confirmPasswordInput, 'error-dist-confirm-password', confirmErr); isDistValid = false; }
+      else setFieldError(confirmPasswordInput, 'error-dist-confirm-password', null);
+
+      if (!businessName) { setFieldError(agencyNameInput, 'error-dist-agency-name', 'Business name is required.'); isDistValid = false; }
+      else setFieldError(agencyNameInput, 'error-dist-agency-name', null);
+
+      const addrErr = validateAddress(address);
+      if (addrErr) { setFieldError(addressInput, 'error-dist-address', addrErr); isDistValid = false; }
+      else setFieldError(addressInput, 'error-dist-address', null);
+
+      if (!city) { setFieldError(cityInput, 'error-dist-city', 'City is required.'); isDistValid = false; }
+      else setFieldError(cityInput, 'error-dist-city', null);
+
+      if (!district) { setFieldError(districtInput, 'error-dist-district', 'District is required.'); isDistValid = false; }
+      else setFieldError(districtInput, 'error-dist-district', null);
+
+      if (!state) { setFieldError(stateInput, 'error-dist-state', 'State is required.'); isDistValid = false; }
+      else setFieldError(stateInput, 'error-dist-state', null);
+
+      if (!/^\d{6}$/.test(pincode)) { setFieldError(pincodeInput, 'error-dist-pincode', 'Enter a valid 6-digit postal pincode.'); isDistValid = false; }
+      else setFieldError(pincodeInput, 'error-dist-pincode', null);
+
+      if (!isDistValid) {
+        showToast("Invalid Input", "Please correct the highlighted fields.", "warning");
         return;
       }
 
@@ -1146,18 +1269,60 @@
     agentForm.addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      const name = document.getElementById('agent-name').value.trim();
-      const mobile = document.getElementById('agent-mobile').value.trim();
-      const email = document.getElementById('agent-email').value.trim();
-      const password = document.getElementById('agent-password').value;
-      const address = document.getElementById('agent-address').value.trim();
-      const pincode = document.getElementById('agent-pincode').value.trim();
-      const distributorId = document.getElementById('agent-distributor-select').value;
+      const nameInput = document.getElementById('agent-name');
+      const mobileInput = document.getElementById('agent-mobile');
+      const emailInput = document.getElementById('agent-email');
+      const passwordInput = document.getElementById('agent-password');
+      const confirmPasswordInput = document.getElementById('agent-confirm-password');
+      const addressInput = document.getElementById('agent-address');
+      const pincodeInput = document.getElementById('agent-pincode');
+      const distSelect = document.getElementById('agent-distributor-select');
+
+      const name = nameInput.value.trim();
+      const mobile = mobileInput.value.trim();
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+      const confirmPassword = confirmPasswordInput ? confirmPasswordInput.value : '';
+      const address = addressInput.value.trim();
+      const pincode = pincodeInput.value.trim();
+      const distributorId = distSelect.value;
       const vehicleType = document.getElementById('agent-vehicle-type').value;
       const vehicleNumber = document.getElementById('agent-vehicle-number').value.trim();
 
-      if (!name || !email || !mobile || !password || !address || !pincode || !distributorId) {
-        showToast("Incomplete Form", "Please fill in all personal, address, and distributor fields.", "warning");
+      let isAgentValid = true;
+
+      const nameErr = validateName(name);
+      if (nameErr) { setFieldError(nameInput, 'error-agent-name', nameErr); isAgentValid = false; }
+      else setFieldError(nameInput, 'error-agent-name', null);
+
+      const mobileErr = validateMobile(mobile);
+      if (mobileErr) { setFieldError(mobileInput, 'error-agent-mobile', mobileErr); isAgentValid = false; }
+      else setFieldError(mobileInput, 'error-agent-mobile', null);
+
+      const emailErr = validateEmail(email);
+      if (emailErr) { setFieldError(emailInput, 'error-agent-email', emailErr); isAgentValid = false; }
+      else setFieldError(emailInput, 'error-agent-email', null);
+
+      const passErr = validatePassword(password);
+      if (passErr) { setFieldError(passwordInput, 'error-agent-password', passErr); isAgentValid = false; }
+      else setFieldError(passwordInput, 'error-agent-password', null);
+
+      const confirmErr = validateConfirmPassword(password, confirmPassword);
+      if (confirmErr) { setFieldError(confirmPasswordInput, 'error-agent-confirm-password', confirmErr); isAgentValid = false; }
+      else setFieldError(confirmPasswordInput, 'error-agent-confirm-password', null);
+
+      const addrErr = validateAddress(address);
+      if (addrErr) { setFieldError(addressInput, 'error-agent-address', addrErr); isAgentValid = false; }
+      else setFieldError(addressInput, 'error-agent-address', null);
+
+      if (!/^\d{6}$/.test(pincode)) { setFieldError(pincodeInput, 'error-agent-pincode', 'Enter a valid 6-digit operating pincode.'); isAgentValid = false; }
+      else setFieldError(pincodeInput, 'error-agent-pincode', null);
+
+      if (!distributorId) { setFieldError(distSelect, 'error-agent-distributor', 'Please select an associated distributor.'); isAgentValid = false; }
+      else setFieldError(distSelect, 'error-agent-distributor', null);
+
+      if (!isAgentValid) {
+        showToast("Invalid Input", "Please correct the highlighted fields.", "warning");
         return;
       }
 

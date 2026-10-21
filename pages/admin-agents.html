@@ -176,16 +176,18 @@
         <h3>Onboard New Delivery Agent</h3>
         <button class="btn-icon" data-close-modal>&times;</button>
       </div>
-      <form id="add-agent-form">
+      <form id="add-agent-form" novalidate>
         <div class="modal-body">
           <div class="form-row">
             <div class="form-group">
               <label for="agent-new-name">Agent Full Name *</label>
               <input type="text" id="agent-new-name" class="form-control" required placeholder="e.g. Ramesh Kumar">
+              <div class="field-error" id="error-agent-new-name"></div>
             </div>
             <div class="form-group">
               <label for="agent-new-mobile">Mobile Number *</label>
               <input type="tel" id="agent-new-mobile" class="form-control" maxlength="10" required placeholder="9876543210">
+              <div class="field-error" id="error-agent-new-mobile"></div>
             </div>
           </div>
 
@@ -193,10 +195,12 @@
             <div class="form-group">
               <label for="agent-new-email">Email Address *</label>
               <input type="email" id="agent-new-email" class="form-control" required placeholder="ramesh@gasbridge.com">
+              <div class="field-error" id="error-agent-new-email"></div>
             </div>
             <div class="form-group">
               <label for="agent-new-vehicle">Vehicle Reg Number *</label>
               <input type="text" id="agent-new-vehicle" class="form-control" required placeholder="TS 08 UB 4512">
+              <div class="field-error" id="error-agent-new-vehicle"></div>
             </div>
           </div>
 
@@ -204,10 +208,12 @@
             <div class="form-group">
               <label for="agent-new-distributor">Assigned Distributor *</label>
               <select id="agent-new-distributor" class="form-control" required></select>
+              <div class="field-error" id="error-agent-new-distributor"></div>
             </div>
             <div class="form-group">
               <label for="agent-new-area">Assigned Service Area *</label>
               <select id="agent-new-area" class="form-control" required></select>
+              <div class="field-error" id="error-agent-new-area"></div>
             </div>
           </div>
         </div>
@@ -224,7 +230,7 @@
     import { requireAuth, logoutUser } from "../js/auth.js";
     import { getDeliveryAgents, getPendingDeliveryAgents, approveDeliveryAgent, rejectDeliveryAgent, getDistributors, getServiceAreas, saveDeliveryAgent } from "../js/firestore.js";
     import { initNotificationsUI } from "../js/notifications.js";
-    import { initModalListeners, openModal, closeModal, escapeHTML, showToast } from "../js/utils.js";
+    import { initModalListeners, openModal, closeModal, escapeHTML, showToast, validateName, validateMobile, validateEmail, setFieldValidation } from "../js/utils.js";
 
     const user = await requireAuth(['admin']);
     if (user) {
@@ -375,14 +381,53 @@
 
       document.getElementById('open-add-agent-btn').addEventListener('click', () => openModal('add-agent-modal'));
 
+      const nameInp = document.getElementById('agent-new-name');
+      const mobileInp = document.getElementById('agent-new-mobile');
+      const emailInp = document.getElementById('agent-new-email');
+      const vehicleInp = document.getElementById('agent-new-vehicle');
+      const distInp = document.getElementById('agent-new-distributor');
+      const areaInp = document.getElementById('agent-new-area');
+
+      [nameInp, mobileInp, emailInp, vehicleInp, distInp, areaInp].filter(Boolean).forEach(inp => {
+        inp.addEventListener('input', () => setFieldValidation(inp, `error-${inp.id}`, ''));
+      });
+
       document.getElementById('add-agent-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const name = document.getElementById('agent-new-name').value.trim();
-        const mobile = document.getElementById('agent-new-mobile').value.trim();
-        const email = document.getElementById('agent-new-email').value.trim();
-        const vehicleNumber = document.getElementById('agent-new-vehicle').value.trim();
-        const distributorId = document.getElementById('agent-new-distributor').value;
-        const serviceAreaId = document.getElementById('agent-new-area').value;
+        const name = nameInp.value.trim();
+        const mobile = mobileInp.value.trim();
+        const email = emailInp.value.trim();
+        const vehicleNumber = vehicleInp.value.trim();
+        const distributorId = distInp.value;
+        const serviceAreaId = areaInp.value;
+
+        let isFormValid = true;
+
+        const nameErr = validateName(name);
+        if (nameErr) { setFieldValidation(nameInp, 'error-agent-new-name', nameErr); isFormValid = false; }
+        else setFieldValidation(nameInp, 'error-agent-new-name', '');
+
+        const mobileErr = validateMobile(mobile);
+        if (mobileErr) { setFieldValidation(mobileInp, 'error-agent-new-mobile', mobileErr); isFormValid = false; }
+        else setFieldValidation(mobileInp, 'error-agent-new-mobile', '');
+
+        const emailErr = validateEmail(email);
+        if (emailErr) { setFieldValidation(emailInp, 'error-agent-new-email', emailErr); isFormValid = false; }
+        else setFieldValidation(emailInp, 'error-agent-new-email', '');
+
+        if (!vehicleNumber) { setFieldValidation(vehicleInp, 'error-agent-new-vehicle', 'Vehicle number is required.'); isFormValid = false; }
+        else setFieldValidation(vehicleInp, 'error-agent-new-vehicle', '');
+
+        if (!distributorId) { setFieldValidation(distInp, 'error-agent-new-distributor', 'Select an associated distributor.'); isFormValid = false; }
+        else setFieldValidation(distInp, 'error-agent-new-distributor', '');
+
+        if (!serviceAreaId) { setFieldValidation(areaInp, 'error-agent-new-area', 'Select an assigned service area.'); isFormValid = false; }
+        else setFieldValidation(areaInp, 'error-agent-new-area', '');
+
+        if (!isFormValid) {
+          showToast("Invalid Input", "Please correct the highlighted errors.", "warning");
+          return;
+        }
 
         const newAgent = {
           id: "agent-" + Date.now().toString().slice(-4),

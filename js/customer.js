@@ -10,7 +10,16 @@ import {
   resolveServiceAreaByPincode, 
   logAuditEvent 
 } from "./firestore.js";
-import { formatCurrency, formatDateTime, getStatusBadgeHTML, showToast, escapeHTML } from "./utils.js";
+import { 
+  formatCurrency, 
+  formatDateTime, 
+  getStatusBadgeHTML, 
+  showToast, 
+  escapeHTML,
+  validateName,
+  validateMobile,
+  setFieldValidation
+} from "./utils.js";
 
 // Initialize Customer Dashboard
 export async function initCustomerDashboard() {
@@ -174,9 +183,23 @@ export async function initCustomerProfile() {
   const stateInput = document.getElementById('prof-state');
   const pincodeInput = document.getElementById('prof-pincode');
 
-  if (nameInput) nameInput.value = profile.name || '';
+  if (nameInput) {
+    nameInput.value = profile.name || '';
+    nameInput.addEventListener('input', () => {
+      const filtered = nameInput.value.replace(/[0-9]/g, '');
+      if (filtered !== nameInput.value) {
+        nameInput.value = filtered;
+      }
+    });
+  }
   if (emailInput) emailInput.value = profile.email || '';
   if (mobileInput) mobileInput.value = profile.mobile || '';
+
+  [nameInput, mobileInput, houseNoInput, streetInput, areaInput, cityInput, districtInput, stateInput, pincodeInput].filter(Boolean).forEach(inp => {
+    inp.addEventListener('input', () => {
+      setFieldValidation(inp, `error-${inp.id}`, '');
+    });
+  });
 
   if (profile.address) {
     if (houseNoInput) houseNoInput.value = profile.address.houseNo || '';
@@ -203,17 +226,63 @@ export async function initCustomerProfile() {
       saveBtn.disabled = true;
       saveBtn.textContent = "Validating Pincode & Updating...";
 
-      try {
-        const newPincode = pincodeInput.value.trim();
+      const rawName = nameInput.value.trim();
+      const rawMobile = mobileInput ? mobileInput.value.trim() : '';
+      const houseNo = houseNoInput ? houseNoInput.value.trim() : '';
+      const street = streetInput ? streetInput.value.trim() : '';
+      const area = areaInput ? areaInput.value.trim() : '';
+      const city = cityInput ? cityInput.value.trim() : '';
+      const district = districtInput ? districtInput.value.trim() : '';
+      const state = stateInput ? stateInput.value.trim() : '';
+      const newPincode = pincodeInput ? pincodeInput.value.trim() : '';
 
-        // Validate new pincode against service areas (Rule 12 & 40)
-        const resolution = await resolveServiceAreaByPincode(newPincode);
-        if (!resolution.supported) {
-          showToast("Unavailable Pincode", "GasBridge is currently unavailable in this pincode.", "error");
-          saveBtn.disabled = false;
-          saveBtn.textContent = "Save Changes & Update Address";
-          return;
-        }
+      let isProfileValid = true;
+
+      const nameErr = validateName(rawName);
+      if (nameErr) { setFieldValidation(nameInput, 'error-prof-name', nameErr); isProfileValid = false; }
+      else setFieldValidation(nameInput, 'error-prof-name', '');
+
+      const mobileErr = validateMobile(rawMobile);
+      if (mobileErr) { setFieldValidation(mobileInput, 'error-prof-mobile', mobileErr); isProfileValid = false; }
+      else setFieldValidation(mobileInput, 'error-prof-mobile', '');
+
+      if (!houseNo) { setFieldValidation(houseNoInput, 'error-prof-houseNo', 'House / Flat number is required.'); isProfileValid = false; }
+      else setFieldValidation(houseNoInput, 'error-prof-houseNo', '');
+
+      if (!street) { setFieldValidation(streetInput, 'error-prof-street', 'Street / Road name is required.'); isProfileValid = false; }
+      else setFieldValidation(streetInput, 'error-prof-street', '');
+
+      if (!area) { setFieldValidation(areaInput, 'error-prof-area', 'Area / Locality is required.'); isProfileValid = false; }
+      else setFieldValidation(areaInput, 'error-prof-area', '');
+
+      if (!city) { setFieldValidation(cityInput, 'error-prof-city', 'City is required.'); isProfileValid = false; }
+      else setFieldValidation(cityInput, 'error-prof-city', '');
+
+      if (!district) { setFieldValidation(districtInput, 'error-prof-district', 'District is required.'); isProfileValid = false; }
+      else setFieldValidation(districtInput, 'error-prof-district', '');
+
+      if (!state) { setFieldValidation(stateInput, 'error-prof-state', 'State is required.'); isProfileValid = false; }
+      else setFieldValidation(stateInput, 'error-prof-state', '');
+
+      if (!/^\d{6}$/.test(newPincode)) { setFieldValidation(pincodeInput, 'error-prof-pincode', 'Please enter a valid 6-digit postal pincode.'); isProfileValid = false; }
+      else setFieldValidation(pincodeInput, 'error-prof-pincode', '');
+
+      if (!isProfileValid) {
+        showToast("Invalid Input", "Please correct the highlighted errors.", "warning");
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Save Changes & Update Address";
+        return;
+      }
+
+      // Validate new pincode against service areas (Rule 12 & 40)
+      const resolution = await resolveServiceAreaByPincode(newPincode);
+      if (!resolution.supported) {
+        setFieldValidation(pincodeInput, 'error-prof-pincode', 'GasBridge is currently unavailable in this pincode.');
+        showToast("Unavailable Pincode", "GasBridge is currently unavailable in this pincode.", "error");
+        saveBtn.disabled = false;
+        saveBtn.textContent = "Save Changes & Update Address";
+        return;
+      }
 
         const updatedProfile = {
           ...profile,
